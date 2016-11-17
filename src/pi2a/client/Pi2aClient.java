@@ -36,11 +36,11 @@ import utils.DBServer;
 import utils.DBServerException;
 
 /**
- * pi2a-client, programme qui lit les données au travers de l'API Rest d'un serveur
- * Web et les importe dans une base de données MongoDb locale.
+ * pi2a-client, programme qui lit les données au travers de l'API Rest d'un
+ * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.01
+ * @version 0.02
  */
 public class Pi2aClient {
 
@@ -145,17 +145,25 @@ public class Pi2aClient {
         System.out.println("Authentification en cours ...");
         httpsClient.sendPost(HttpsClient.REST_API_PATH + HttpsClient.LOGIN_CMDE);
 
-        System.out.println("Récupération des compagnies ...");
-        processCompanies(httpsClient, null, mongoDatabase);
+        if (getArgs.getReadCompanies()) {
+            System.out.println("Récupération des compagnies ...");
+            processCompanies(httpsClient, null, mongoDatabase);
+        }
 
-        System.out.println("Récupération des patrimoines ...");
-        processPatrimonies(httpsClient, mongoDatabase);
+        if (getArgs.getReadPatrimonies()) {
+            System.out.println("Récupération des patrimoines ...");
+            processPatrimonies(httpsClient, mongoDatabase);
+        }
 
-        System.out.println("Récupération des intervenants ...");
-        processProviderContacts(httpsClient, mongoDatabase);
+        if (getArgs.getReadProviders()) {
+            System.out.println("Récupération des intervenants ...");
+            processProviderContacts(httpsClient, mongoDatabase);
+        }
 
-        System.out.println("Récupération des événements ...");
-        processEvents(httpsClient, mongoDatabase);
+        if (getArgs.getReadEvents()) {
+            System.out.println("Récupération des événements ...");
+            processEvents(httpsClient, mongoDatabase);
+        }
 
     }
 
@@ -605,11 +613,13 @@ public class Pi2aClient {
         String command;
         Range range;
         EventDAO eventDAO;
+        String from = "2016-11-01T00:00:00Z";
+        String to = "2016-11-17T00:00:00Z";
 
         eventDAO = new EventDAO(mongoDatabase);
 
-        System.out.println("Suppression des événements ...");
-        eventDAO.drop();
+//        System.out.println("Suppression des événements ...");
+//        eventDAO.drop();
         command = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
         System.out.println("  Commande pour récupérer les événements : " + command);
         objectMapper = new ObjectMapper();
@@ -617,7 +627,8 @@ public class Pi2aClient {
         i = 0;
         try {
             do {
-                httpsClient.sendGet(command + "?range=" + range.getRange());
+                httpsClient.sendGet(command + "?range=" + range.getRange()
+                        + "&from=" + from + "&to=" + to);
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
                 System.out.println(range);
