@@ -13,6 +13,8 @@ import bkgpi2a.GetArgs;
 import bkgpi2a.GetArgsException;
 import bkgpi2a.HttpsClient;
 import bkgpi2a.Identifiants;
+import bkgpi2a.LastRun;
+import bkgpi2a.LastRunDAO;
 import bkgpi2a.Patrimony;
 import bkgpi2a.PatrimonyContainer;
 import bkgpi2a.PatrimonyDAO;
@@ -40,7 +42,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.02
+ * @version 0.03
  */
 public class Pi2aClient {
 
@@ -610,25 +612,41 @@ public class Pi2aClient {
         int nbEvents;
         int i;
         EventContainer eventContainer;
-        String command;
+        String baseCommand;
+        StringBuffer command;
         Range range;
         EventDAO eventDAO;
-        String from = "2016-11-01T00:00:00Z";
-        String to = "2016-11-17T00:00:00Z";
+        String from;
+        String to;
+        LastRun thisRun;
+        LastRun lastRun;
+        LastRunDAO lastRunDAO;
 
         eventDAO = new EventDAO(mongoDatabase);
+        lastRunDAO = new LastRunDAO(mongoDatabase);
 
-//        System.out.println("Suppression des événements ...");
-//        eventDAO.drop();
-        command = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
-        System.out.println("  Commande pour récupérer les événements : " + command);
+        thisRun = new LastRun("pi2a-client");
+        lastRun = lastRunDAO.find("pi2a-client");
+        lastRunDAO.update(thisRun);
+        
+        from = lastRun.getLastRun();
+        to = thisRun.getLastRun();
+        
+        baseCommand = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
+        System.out.println("  Commande pour récupérer les événements : " + baseCommand);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
         try {
             do {
-                httpsClient.sendGet(command + "?range=" + range.getRange()
-                        + "&from=" + from + "&to=" + to);
+                command = new StringBuffer(baseCommand);
+                if (i > 0) command.append("?range=").append(range.getRange()).append("&");
+                else command.append("?");
+                
+                command.append("from=").append(from);
+                command.append("&to=").append(to);
+                
+                httpsClient.sendGet(command.toString());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
                 System.out.println(range);
