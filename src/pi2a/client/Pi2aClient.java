@@ -9,8 +9,6 @@ import bkgpi2a.CompanyDAO;
 import bkgpi2a.Event;
 import bkgpi2a.EventContainer;
 import bkgpi2a.EventDAO;
-import bkgpi2a.GetArgs;
-import bkgpi2a.GetArgsException;
 import bkgpi2a.HttpsClient;
 import bkgpi2a.Identifiants;
 import bkgpi2a.LastRun;
@@ -42,7 +40,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.03
+ * @version 0.04
  */
 public class Pi2aClient {
 
