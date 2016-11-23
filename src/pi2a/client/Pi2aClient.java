@@ -625,6 +625,7 @@ public class Pi2aClient {
 
         thisRun = new LastRun("pi2a-client");
         lastRun = lastRunDAO.find("pi2a-client");
+        System.out.println("  " + lastRun + ", " + thisRun);
         lastRunDAO.update(thisRun);
         
         from = lastRun.getLastRun();
