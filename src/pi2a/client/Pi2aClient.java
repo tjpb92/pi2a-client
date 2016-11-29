@@ -26,6 +26,7 @@ import bkgpi2a.UserDAO;
 import bkgpi2a.WebServer;
 import bkgpi2a.WebServerException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import java.io.*;
@@ -40,7 +41,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.04
+ * @version 0.05
  */
 public class Pi2aClient {
 
@@ -659,6 +660,9 @@ public class Pi2aClient {
                     eventDAO.insert(event);
                 }
             } while (range.hasNext());
+        } catch (InvalidTypeIdException ex) {
+            System.out.println("ERROR : Unknow event " + ex);
+//            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
         } catch (Exception ex) {
