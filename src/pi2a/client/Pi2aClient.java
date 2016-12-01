@@ -41,7 +41,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.05
+ * @version 0.07
  */
 public class Pi2aClient {
 
@@ -72,7 +72,7 @@ public class Pi2aClient {
     private Identifiants dbId;
 
     /**
-     * Constructeur de la classe Bkgpi2a
+     * Constructeur de la classe Pi2aClient
      * <p>
      * Les arguments en ligne de commande permettent de changer le mode de
      * fonctionnement.</p><ul>
@@ -112,7 +112,7 @@ public class Pi2aClient {
         MongoClient mongoClient;
         MongoDatabase mongoDatabase;
 
-        System.out.println("Création d'une instance de Bkgpi2a ...");
+        System.out.println("Création d'une instance de Pi2aClient ...");
 
         System.out.println("Analyse des arguments de la ligne de commande ...");
         getArgs = new GetArgs(args);
@@ -197,18 +197,18 @@ public class Pi2aClient {
     }
 
     /**
-     * Retourne le contenu de Bkgpi2a
+     * Retourne le contenu de Pi2aClient
      *
-     * @return retourne le contenu de Bkgpi2a
+     * @return retourne le contenu de Pi2aClient
      */
     @Override
     public String toString() {
-        return "Bkgpi2a:{webServer=" + getWebServerType()
+        return "Pi2aClient:{webServer=" + getWebServerType()
                 + ", dbServer=" + getDbServerType() + "}";
     }
 
     /**
-     * Programme principal pour lancer Bkgpi2a.
+     * Programme principal pour lancer Pi2aClient.
      *
      * @param args paramètre de ligne de commande (cf. constructeur).
      */
