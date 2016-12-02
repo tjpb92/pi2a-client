@@ -41,7 +41,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.07
+ * @version 0.08
  */
 public class Pi2aClient {
 
@@ -620,6 +620,10 @@ public class Pi2aClient {
         LastRun thisRun;
         LastRun lastRun;
         LastRunDAO lastRunDAO;
+        String json;
+        JsonString jsonString;
+        int responseCode;
+        Event event;
 
         eventDAO = new EventDAO(mongoDatabase);
         lastRunDAO = new LastRunDAO(mongoDatabase);
@@ -628,45 +632,68 @@ public class Pi2aClient {
         lastRun = lastRunDAO.find("pi2a-client");
         System.out.println("  " + lastRun + ", " + thisRun);
         lastRunDAO.update(thisRun);
-        
+
         from = lastRun.getLastRun();
         to = thisRun.getLastRun();
-        
+
         baseCommand = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
         System.out.println("  Commande pour récupérer les événements : " + baseCommand);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
-        try {
-            do {
-                command = new StringBuffer(baseCommand);
-                if (i > 0) command.append("?range=").append(range.getRange()).append("&");
-                else command.append("?");
-                
-                command.append("from=").append(from);
-                command.append("&to=").append(to);
-                
+//        try {
+        do {
+            command = new StringBuffer(baseCommand);
+            if (i > 0) {
+                command.append("?range=").append(range.getRange()).append("&");
+            } else {
+                command.append("?");
+            }
+            command.append("from=").append(from);
+            command.append("&to=").append(to);
+            try {
                 httpsClient.sendGet(command.toString());
+                responseCode = httpsClient.getResponseCode();
+            } catch (Exception exception) {
+//                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, exception);
+                System.out.println("ERREUR : httpsClient.sendGet " + exception);
+                responseCode = 0;
+            }
+
+            if (responseCode == 200 || responseCode == 206) {
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
                 System.out.println(range);
-                eventContainer = objectMapper.readValue(httpsClient.getResponse(), EventContainer.class);
+//                    eventContainer = objectMapper.readValue(httpsClient.getResponse(), EventContainer.class);
 
-                nbEvents = eventContainer.getEventList().size();
-                System.out.println(nbEvents + " événement(s) récupéré(s)");
-                for (Event event : eventContainer.getEventList()) {
+                jsonString = new JsonString(httpsClient.getResponse());
+
+//                    nbEvents = eventContainer.getEventList().size();
+//                    System.out.println(nbEvents + " événement(s) récupéré(s)");
+//                    for (Event event : eventContainer.getEventList()) {
+                while ((json = jsonString.next()) != null) {
                     i++;
-                    System.out.println(i + ", event:" + event);
-                    eventDAO.insert(event);
+                    try {
+                        event = objectMapper.readValue(json, Event.class);
+                        System.out.println(i + ", event:" + event);
+                        eventDAO.insert(event);
+                    } catch (InvalidTypeIdException exception) {
+                        System.out.println("ERROR : Unknow event " + exception);
+//                              Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (IOException exception) {
+//                            Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
+                        System.out.println("ERROR : IO exception on event " + exception);
+                    }
                 }
-            } while (range.hasNext());
-        } catch (InvalidTypeIdException ex) {
-            System.out.println("ERROR : Unknow event " + ex);
+            }
+        } while (range.hasNext());
+//        } catch (InvalidTypeIdException ex) {
+//            System.out.println("ERROR : Unknow event " + ex);
+////            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+//        } catch (IOException ex) {
 //            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (Exception ex) {
-            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
+//        } catch (Exception ex) {
+//            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+//        }
     }
 }
