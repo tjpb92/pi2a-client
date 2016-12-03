@@ -41,7 +41,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.08
+ * @version 0.09
  */
 public class Pi2aClient {
 
@@ -624,6 +624,7 @@ public class Pi2aClient {
         JsonString jsonString;
         int responseCode;
         Event event;
+        Event sameEvent;
 
         eventDAO = new EventDAO(mongoDatabase);
         lastRunDAO = new LastRunDAO(mongoDatabase);
@@ -676,9 +677,12 @@ public class Pi2aClient {
                     try {
                         event = objectMapper.readValue(json, Event.class);
                         System.out.println(i + ", event:" + event);
-                        eventDAO.insert(event);
+                        if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null)
+                            eventDAO.insert(event);
+                        else
+                            System.out.println("ERROR : événement rejeté car déjà lu");
                     } catch (InvalidTypeIdException exception) {
-                        System.out.println("ERROR : Unknow event " + exception);
+                        System.out.println("ERROR : événement inconnu " + exception);
 //                              Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
                     } catch (IOException exception) {
 //                            Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
