@@ -41,7 +41,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.09
+ * @version 0.10
  */
 public class Pi2aClient {
 
@@ -70,6 +70,18 @@ public class Pi2aClient {
      * MyDatabases.prop.
      */
     private Identifiants dbId;
+
+    /**
+     * debugMode : fonctionnement du programme en mode debug (true/false).
+     * Valeur par défaut : false.
+     */
+    private static boolean debugMode = false;
+
+    /**
+     * testMode : fonctionnement du programme en mode test (true/false). Valeur
+     * par défaut : false.
+     */
+    private static boolean testMode = false;
 
     /**
      * Constructeur de la classe Pi2aClient
@@ -118,21 +130,31 @@ public class Pi2aClient {
         getArgs = new GetArgs(args);
         setWebServerType(getArgs.getWebServerType());
         setDbServerType(getArgs.getDbServerType());
+        setDebugMode(getArgs.getDebugMode());
+        setTestMode(getArgs.getTestMode());
 
         System.out.println("Lecture des paramètres d'exécution ...");
-        applicationProperties = new ApplicationProperties("MyDatabases.prop");
+        applicationProperties = new ApplicationProperties("pi2a-client.prop");
 
         System.out.println("Lecture des paramètres du serveur Web ...");
         webServer = new WebServer(getWebServerType(), applicationProperties);
-        System.out.println(webServer);
+        if (debugMode) {
+            System.out.println(webServer);
+        }
         setWebId(applicationProperties);
-        System.out.println(getWebId());
+        if (debugMode) {
+            System.out.println(getWebId());
+        }
 
         System.out.println("Lecture des paramètres du serveur de base de données ...");
         dbServer = new DBServer(getDbServerType(), applicationProperties);
-        System.out.println(dbServer);
+        if (debugMode) {
+            System.out.println(dbServer);
+        }
         setDbId(applicationProperties);
-        System.out.println(getDbId());
+        if (debugMode) {
+            System.out.println(getDbId());
+        }
 
         System.out.println("Ouverture de la connexion au serveur de base de données : " + dbServer.getName());
         mongoClient = new MongoClient(dbServer.getIpAddress(), (int) dbServer.getPortNumber());
@@ -141,7 +163,7 @@ public class Pi2aClient {
         mongoDatabase = mongoClient.getDatabase(dbServer.getDbName());
 
         System.out.println("Ouverture de la connexion au site Web : " + webServer.getName());
-        httpsClient = new HttpsClient(webServer.getIpAddress(), getWebId());
+        httpsClient = new HttpsClient(webServer.getIpAddress(), getWebId(), debugMode, testMode);
 
         System.out.println("Authentification en cours ...");
         httpsClient.sendPost(HttpsClient.REST_API_PATH + HttpsClient.LOGIN_CMDE);
@@ -220,7 +242,9 @@ public class Pi2aClient {
 
         try {
             pi2aClient = new Pi2aClient(args);
-            System.out.println(pi2aClient);
+            if (debugMode) {
+                System.out.println(pi2aClient);
+            }
         } catch (Exception exception) {
             System.out.println("Problème lors de l'instanciation de Pi2aClient");
             exception.printStackTrace();
@@ -342,7 +366,7 @@ public class Pi2aClient {
 //            System.out.println("Suppression des utilisateurs ...");
 //            userDAO.drop();
         }
-        System.out.println("Commande pour récupérer les clients : " + command);
+        if (debugMode) System.out.println("Commande pour récupérer les clients : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -351,7 +375,9 @@ public class Pi2aClient {
                 httpsClient.sendGet(command + "?range=" + range.getRange());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
-                System.out.println(range);
+                if (debugMode) {
+                    System.out.println(range);
+                }
                 companyContainer = objectMapper.readValue(httpsClient.getResponse(), CompanyContainer.class);
 
                 nbCompanies = companyContainer.getCompanyList().size();
@@ -395,7 +421,7 @@ public class Pi2aClient {
         usersDAO = new UserDAO(mongoDatabase);
 
         command = HttpsClient.REST_API_PATH + HttpsClient.COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.USERS_CMDE;
-        System.out.println("  Commande pour récupérer les utilisateurs : " + command);
+        if (debugMode) System.out.println("  Commande pour récupérer les utilisateurs : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -404,7 +430,9 @@ public class Pi2aClient {
                 httpsClient.sendGet(command + "?range=" + range.getRange());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
-                System.out.println(range);
+                if (debugMode) {
+                    System.out.println(range);
+                }
                 userContainer = objectMapper.readValue(httpsClient.getResponse(), UserContainer.class);
                 nbUsers = userContainer.getUserList().size();
                 System.out.println("  " + nbUsers + " utilisateur(s) récupéré(s)");
@@ -439,7 +467,7 @@ public class Pi2aClient {
         agencyDAO = new AgencyDAO(mongoDatabase);
 
         command = HttpsClient.REST_API_PATH + HttpsClient.COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.AGENCIES_CMDE;
-        System.out.println("  Commande pour récupérer les agences : " + command);
+        if (debugMode) System.out.println("  Commande pour récupérer les agences : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -448,7 +476,9 @@ public class Pi2aClient {
                 httpsClient.sendGet(command + "?range=" + range.getRange());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
-                System.out.println(range);
+                if (debugMode) {
+                    System.out.println(range);
+                }
                 agencyContainer = objectMapper.readValue(httpsClient.getResponse(), AgencyContainer.class);
                 nbAgencies = agencyContainer.getAgencyList().size();
                 System.out.println(nbAgencies + " agence(s) récupérée(s)");
@@ -483,7 +513,7 @@ public class Pi2aClient {
         subsidiaryDAO = new CompanyDAO(mongoDatabase);
 
         command = HttpsClient.REST_API_PATH + HttpsClient.COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.SUBSIDIARIES_CMDE;
-        System.out.println("  Commande pour récupérer les filiales : " + command);
+        if (debugMode) System.out.println("  Commande pour récupérer les filiales : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -492,7 +522,9 @@ public class Pi2aClient {
                 httpsClient.sendGet(command + "?range=" + range.getRange());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
-                System.out.println(range);
+                if (debugMode) {
+                    System.out.println(range);
+                }
                 subsidiaryContainer = objectMapper.readValue(httpsClient.getResponse(), CompanyContainer.class);
                 nbSubsidiaries = subsidiaryContainer.getCompanyList().size();
                 System.out.println(nbSubsidiaries + " filiale(s) récupérée(s)");
@@ -529,7 +561,7 @@ public class Pi2aClient {
         System.out.println("Suppression des patrimoines ...");
         patrimonyDAO.drop();
         command = HttpsClient.REST_API_PATH + HttpsClient.PATRIMONIES_CMDE;
-        System.out.println("  Commande pour récupérer les patrimoines : " + command);
+        if (debugMode) System.out.println("  Commande pour récupérer les patrimoines : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -538,7 +570,9 @@ public class Pi2aClient {
                 httpsClient.sendGet(command + "?range=" + range.getRange());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
-                System.out.println(range);
+                if (debugMode) {
+                    System.out.println(range);
+                }
                 patrimonyContainer = objectMapper.readValue(httpsClient.getResponse(), PatrimonyContainer.class);
 
                 nbPatrimonies = patrimonyContainer.getPatrimonyList().size();
@@ -576,7 +610,7 @@ public class Pi2aClient {
         System.out.println("Suppression des providerContacts ...");
         providerContactDAO.drop();
         command = HttpsClient.REST_API_PATH + HttpsClient.PROVIDER_CONTACTS_CMDE;
-        System.out.println("  Commande pour récupérer les providerContacts : " + command);
+        if (debugMode) System.out.println("  Commande pour récupérer les providerContacts : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -585,7 +619,9 @@ public class Pi2aClient {
                 httpsClient.sendGet(command + "?range=" + range.getRange());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
-                System.out.println(range);
+                if (debugMode) {
+                    System.out.println(range);
+                }
                 providerContactContainer = objectMapper.readValue(httpsClient.getResponse(), ProviderContactContainer.class);
                 nbProviderContacts = providerContactContainer.getProviderContactList().size();
                 System.out.println(nbProviderContacts + " contact(s) récupéréxe(s)");
@@ -638,7 +674,7 @@ public class Pi2aClient {
         to = thisRun.getLastRun();
 
         baseCommand = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
-        System.out.println("  Commande pour récupérer les événements : " + baseCommand);
+        if (debugMode) System.out.println("  Commande pour récupérer les événements : " + baseCommand);
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -677,10 +713,11 @@ public class Pi2aClient {
                     try {
                         event = objectMapper.readValue(json, Event.class);
                         System.out.println(i + ", event:" + event);
-                        if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null)
+                        if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null) {
                             eventDAO.insert(event);
-                        else
+                        } else {
                             System.out.println("ERROR : événement rejeté car déjà lu");
+                        }
                     } catch (InvalidTypeIdException exception) {
                         System.out.println("ERROR : événement inconnu " + exception);
 //                              Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -700,4 +737,34 @@ public class Pi2aClient {
 //            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
 //        }
     }
+
+    /**
+     * @param debugMode : fonctionnement du programme en mode debug
+     * (true/false).
+     */
+    public void setDebugMode(boolean debugMode) {
+        this.debugMode = debugMode;
+    }
+
+    /**
+     * @param testMode : fonctionnement du programme en mode test (true/false).
+     */
+    public void setTestMode(boolean testMode) {
+        this.testMode = testMode;
+    }
+
+    /**
+     * @return debugMode : retourne le mode de fonctionnement debug.
+     */
+    public boolean getDebugMode() {
+        return (debugMode);
+    }
+
+    /**
+     * @return testMode : retourne le mode de fonctionnement test.
+     */
+    public boolean getTestMode() {
+        return (testMode);
+    }
+
 }

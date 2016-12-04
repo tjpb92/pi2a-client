@@ -8,7 +8,7 @@ java pi2a-client [-webserver web] [-dbserver db] [-companies] [-patrimonies] [-p
 ```
 où :
 * ```-webserver web``` est la référence au serveur web distant, par défaut désigne le serveur de développement (paramètre optionnel).
-* ```-dbserver db``` est la référence à la base de données, par défaut désigne la base de données de développement. Voir fichier *myDatabases.prop* (optionnel).
+* ```-dbserver db``` est la référence à la base de données, par défaut désigne la base de données de développement. Voir fichier *pi2a-client.prop* (optionnel).
 * ```-companies``` demande la synchronisation des clients (paramètre optionnel).
 * ```-patrimonies``` demande la synchronisation des patrimoines (paramètre optionnel).
 * ```-providers``` demande la synchronisation des fournisseurs (paramètre optionnel).
