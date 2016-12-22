@@ -1,16 +1,16 @@
 package pi2a.client;
 
-/*
- * Cette classe sert à vérifier et à récupérer les arguments passés en ligne de
- * commande au programme Bkgpi2a ou pi2a-client.
- * @author Thierry Baribaud
- * @version 0.04
- */
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * Cette classe sert à vérifier et à récupérer les arguments passés en ligne de
+ * commande au programme Bkgpi2a ou pi2a-client.
+ * @author Thierry Baribaud
+ * @version 0.12
+ */
 public class GetArgs {
 
     private static final DateFormat MyDateFormat = new SimpleDateFormat("dd/MM/yyyy");
