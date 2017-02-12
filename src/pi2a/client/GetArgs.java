@@ -7,9 +7,9 @@ import java.util.Date;
 
 /**
  * Cette classe sert à vérifier et à récupérer les arguments passés en ligne de
- * commande au programme Bkgpi2a ou pi2a-client.
+ * commande au programme pi2a-client.
  * @author Thierry Baribaud
- * @version 0.12
+ * @version 0.13
  */
 public class GetArgs {
 
@@ -238,7 +238,8 @@ public class GetArgs {
      * Affiche le mode d'utilisation du programme.
      */
     public static void usage() {
-        System.out.println("Usage : java Bkgpi2a -webserver prod -dbserver prod"
+        System.out.println("Usage : java pi2a-client [-webserver prod|pre-prod]"
+                + " [-dbserver prod|pre-prod]"
                 + " [-b début] [-f fin]"
                 + " [-companies] [-patrimonies] [-providers] [-events]"
                 + " [-d] [-t]");
