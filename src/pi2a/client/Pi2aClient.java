@@ -3,6 +3,9 @@ package pi2a.client;
 import bkgpi2a.Agency;
 import bkgpi2a.AgencyContainer;
 import bkgpi2a.AgencyDAO;
+import bkgpi2a.ClientCompany;
+import bkgpi2a.ClientCompanyContainer;
+import bkgpi2a.ClientCompanyDAO;
 import bkgpi2a.Company;
 import bkgpi2a.CompanyContainer;
 import bkgpi2a.CompanyDAO;
@@ -41,7 +44,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.10
+ * @version 0.47
  */
 public class Pi2aClient {
 
@@ -167,6 +170,11 @@ public class Pi2aClient {
 
         System.out.println("Authentification en cours ...");
         httpsClient.sendPost(HttpsClient.REST_API_PATH + HttpsClient.LOGIN_CMDE);
+
+        if (getArgs.getReadClientCompanies()) {
+            System.out.println("Récupération des compagnies ...");
+            processClientCompanies(httpsClient, null, mongoDatabase);
+        }
 
         if (getArgs.getReadCompanies()) {
             System.out.println("Récupération des compagnies ...");
@@ -340,6 +348,76 @@ public class Pi2aClient {
      * @param uid identifiant unique d'une compagnie, filiale ou agence
      * @param mongoDatabase connexion à la base de données locale
      */
+    private void processClientCompanies(HttpsClient httpsClient, String uid, MongoDatabase mongoDatabase) {
+        ClientCompanyContainer clientCompanyContainer;
+        ObjectMapper objectMapper;
+        int nbCompanies;
+        int i;
+        String command;
+        Range range;
+        ClientCompanyDAO clientCompanyDAO;
+        UserDAO userDAO;
+        AgencyDAO agencyDAO;
+
+        clientCompanyDAO = new ClientCompanyDAO(mongoDatabase);
+        userDAO = new UserDAO(mongoDatabase);
+        agencyDAO = new AgencyDAO(mongoDatabase);
+
+        if (uid != null) {
+            command = HttpsClient.REST_API_PATH + HttpsClient.CLIENT_COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.AGENCIES_CMDE;
+        } else {
+            command = HttpsClient.REST_API_PATH + HttpsClient.CLIENT_COMPANIES_CMDE;
+            System.out.println("Suppression des compagnies ...");
+            clientCompanyDAO.drop();
+            System.out.println("Suppression des agences ...");
+            agencyDAO.drop();
+            System.out.println("Suppression des utilisateurs ...");
+            userDAO.drop();
+        }
+        if (debugMode) System.out.println("Commande pour récupérer les clients : " + command);
+        objectMapper = new ObjectMapper();
+        range = new Range();
+        i = 0;
+        try {
+            do {
+                httpsClient.sendGet(command + "?range=" + range.getRange());
+                range.contentRange(httpsClient.getContentRange());
+                range.setPage(httpsClient.getAcceptRange());
+                if (debugMode) {
+                    System.out.println(range);
+                }
+                clientCompanyContainer = objectMapper.readValue(httpsClient.getResponse(), ClientCompanyContainer.class);
+
+                nbCompanies = clientCompanyContainer.getClientCompanyList().size();
+                System.out.println(nbCompanies + " compagnie(s) récupérée(s)");
+                for (ClientCompany clientCompany : clientCompanyContainer.getClientCompanyList()) {
+                    i++;
+                    System.out.println("  " + i + " Company:" + clientCompany.getLabel()
+                            + " " + clientCompany.getCompanyType()
+                            + " " + clientCompany.getBillingType());
+                    clientCompanyDAO.insert(clientCompany);
+                    processUsers(httpsClient, clientCompany.getUid(), mongoDatabase);
+                    if ("ClientAccountHolding".equals(clientCompany.getCompanyType())) {
+                        processSubsidiaries(httpsClient, clientCompany.getUid(), mongoDatabase);
+                    } else if ("ClientAccount".equals(clientCompany.getCompanyType())) {
+                        processAgencies(httpsClient, clientCompany.getUid(), mongoDatabase);
+                    }
+                }
+            } while (range.hasNext());
+        } catch (IOException ex) {
+            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (Exception ex) {
+            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    /**
+     * Récupère les sociétés enregistrées sur le site Web
+     *
+     * @param httpsClient connexion au site Web
+     * @param uid identifiant unique d'une compagnie, filiale ou agence
+     * @param mongoDatabase connexion à la base de données locale
+     */
     private void processCompanies(HttpsClient httpsClient, String uid, MongoDatabase mongoDatabase) {
         CompanyContainer companyContainer;
         ObjectMapper objectMapper;
@@ -420,7 +498,9 @@ public class Pi2aClient {
 
         usersDAO = new UserDAO(mongoDatabase);
 
-        command = HttpsClient.REST_API_PATH + HttpsClient.COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.USERS_CMDE;
+//        command = HttpsClient.REST_API_PATH + HttpsClient.CLIENT_COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.USERS_CMDE;
+//  Pas très propre, faire mieux plus tard, TB, le 1er novembre 2017.
+        command = HttpsClient.REST_API_PATH + HttpsClient.CLIENT_COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.USERS_CMDE;
         if (debugMode) System.out.println("  Commande pour récupérer les utilisateurs : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
@@ -466,7 +546,7 @@ public class Pi2aClient {
 
         agencyDAO = new AgencyDAO(mongoDatabase);
 
-        command = HttpsClient.REST_API_PATH + HttpsClient.COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.AGENCIES_CMDE;
+        command = HttpsClient.REST_API_PATH + HttpsClient.CLIENT_COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.AGENCIES_CMDE;
         if (debugMode) System.out.println("  Commande pour récupérer les agences : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
@@ -502,17 +582,17 @@ public class Pi2aClient {
      * @param mongoDatabase connexion à la base de données locale
      */
     private void processSubsidiaries(HttpsClient httpsClient, String uid, MongoDatabase mongoDatabase) {
-        CompanyContainer subsidiaryContainer;
+        ClientCompanyContainer subsidiaryContainer;
         ObjectMapper objectMapper;
         int nbSubsidiaries;
         int i;
         String command;
         Range range;
-        CompanyDAO subsidiaryDAO;
+        ClientCompanyDAO subsidiaryDAO;
 
-        subsidiaryDAO = new CompanyDAO(mongoDatabase);
+        subsidiaryDAO = new ClientCompanyDAO(mongoDatabase);
 
-        command = HttpsClient.REST_API_PATH + HttpsClient.COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.SUBSIDIARIES_CMDE;
+        command = HttpsClient.REST_API_PATH + HttpsClient.CLIENT_COMPANIES_CMDE + "/" + uid + "/" + HttpsClient.SUBSIDIARIES_CMDE;
         if (debugMode) System.out.println("  Commande pour récupérer les filiales : " + command);
         objectMapper = new ObjectMapper();
         range = new Range();
@@ -525,10 +605,10 @@ public class Pi2aClient {
                 if (debugMode) {
                     System.out.println(range);
                 }
-                subsidiaryContainer = objectMapper.readValue(httpsClient.getResponse(), CompanyContainer.class);
-                nbSubsidiaries = subsidiaryContainer.getCompanyList().size();
+                subsidiaryContainer = objectMapper.readValue(httpsClient.getResponse(), ClientCompanyContainer.class);
+                nbSubsidiaries = subsidiaryContainer.getClientCompanyList().size();
                 System.out.println(nbSubsidiaries + " filiale(s) récupérée(s)");
-                for (Company subsidiary : subsidiaryContainer.getCompanyList()) {
+                for (ClientCompany subsidiary : subsidiaryContainer.getClientCompanyList()) {
                     i++;
                     System.out.println("    " + i + " Subsidiary:" + subsidiary.getLabel() + ":" + subsidiary.getCompanyType());
                     subsidiaryDAO.insert(subsidiary);
@@ -604,6 +684,7 @@ public class Pi2aClient {
         String command;
         Range range;
         ProviderContactDAO providerContactDAO;
+        String response;
 
         providerContactDAO = new ProviderContactDAO(mongoDatabase);
 
@@ -622,12 +703,14 @@ public class Pi2aClient {
                 if (debugMode) {
                     System.out.println(range);
                 }
-                providerContactContainer = objectMapper.readValue(httpsClient.getResponse(), ProviderContactContainer.class);
+                response = httpsClient.getResponse();
+                System.out.println("Réponse=" + response);
+                providerContactContainer = objectMapper.readValue(response, ProviderContactContainer.class);
                 nbProviderContacts = providerContactContainer.getProviderContactList().size();
                 System.out.println(nbProviderContacts + " contact(s) récupéréxe(s)");
                 for (ProviderContact providerContact : providerContactContainer.getProviderContactList()) {
                     i++;
-                    System.out.println(i + "  ProviderContact:" + providerContact.getLabel());
+                    System.out.println(i + "  ProviderContact:" + providerContact.getLabel() + providerContact.getName());
                     providerContactDAO.insert(providerContact);
                 }
             } while (range.hasNext());

@@ -1,36 +1,56 @@
 # Properties for production environnement
-prod.dbserver.name=eole
+prod.webserver.name=Web - Production
+prod.webserver.ip=https://web.com
+prod.webserver.port=80
+prod.webserver.path=api/xyz/
+prod.webserver.login=user
+prod.webserver.passwd=passwd
+
+prod.dbserver.name=Mongo Prod
 prod.dbserver.ip=1.2.3.4
-prod.dbserver.port=1234
-prod.dbserver.dbname=bdd
-prod.dbserver.login=user
+prod.dbserver.port=27017
+prod.dbserver.dbname=proddb
+prod.dbserver.login=login
 prod.dbserver.passwd=passwd
-prod.dbserver.informixserver=bdd
-prod.dbserver.drivername=Informix
-prod.dbserver.driverclass=com.informix.jdbc.IfxDriver
+prod.dbserver.informixserver=na
+prod.dbserver.drivername=MongoDB
+prod.dbserver.driverclass=MongoDB
 prod.dbserver.nb.thread=8
 
-# No pre-prod dbserver for Anstel
+# Properties for pre-production environnement
+pre-prod.webserver.name=Web - Pre-Production
+pre-prod.webserver.ip=https://web-preprod.com
+pre-prod.webserver.port=80
+pre-prod.webserver.path=api/xyz/
+pre-prod.webserver.login=user
+pre-prod.webserver.passwd=passwd
+
+pre-prod.dbserver.name=Mongo Pre-prod
+pre-prod.dbserver.ip=1.2.3.5
+pre-prod.dbserver.port=27017
+pre-prod.dbserver.dbname=preproddb
+pre-prod.dbserver.login=login
+pre-prod.dbserver.passwd=passwd
+pre-prod.dbserver.informixserver=na
+pre-prod.dbserver.drivername=MongoDB
+pre-prod.dbserver.driverclass=MongoDB
+pre-prod.dbserver.nb.thread=8
 
 # Properties for development environnement
-dev.dbserver.name=zephir
-dev.dbserver.ip=1.2.3.5
-dev.dbserver.port=1235
-dev.dbserver.dbname=bdd
-dev.dbserver.login=user
-dev.dbserver.passwd=passwd
-dev.dbserver.informixserver=bdd
-dev.dbserver.drivername=Informix
-dev.dbserver.driverclass=com.informix.jdbc.IfxDriver
-dev.dbserver.nb.thread=8
+dev.webserver.name=Web - Pre-Production
+dev.webserver.ip=https://web-dev.com
+dev.webserver.port=80
+dev.webserver.path=api/xyz/
+dev.webserver.login=user
+dev.webserver.passwd=passwd
 
-# Properties for MySQL development environnement
-mysql.dbserver.name=vmsrv
-mysql.dbserver.ip=localhost
-mysql.dbserver.port=1234
-mysql.dbserver.dbname=bdd
-mysql.dbserver.login=user
-mysql.dbserver.passwd=passwd
-mysql.dbserver.drivername=MySQL
-mysql.dbserver.driverclass=com.mysql.jdbc.Driver
-mysql.dbserver.nb.thread=8
+dev.dbserver.name=Mongo Dev
+dev.dbserver.ip=1.2.3.6
+dev.dbserver.port=27017
+dev.dbserver.dbname=devdb
+dev.dbserver.login=login
+dev.dbserver.passwd=passwd
+dev.dbserver.informixserver=na
+dev.dbserver.drivername=MongoDB
+dev.dbserver.driverclass=MongoDB
+dev.dbserver.nb.thread=8

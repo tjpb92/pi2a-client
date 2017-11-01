@@ -8,8 +8,9 @@ import java.util.Date;
 /**
  * Cette classe sert à vérifier et à récupérer les arguments passés en ligne de
  * commande au programme pi2a-client.
+ *
  * @author Thierry Baribaud
- * @version 0.13
+ * @version 0.14
  */
 public class GetArgs {
 
@@ -36,6 +37,13 @@ public class GetArgs {
      * endDate : date de fin de l'export à 0h. Valeur par défaut : aujourd'hui.
      */
     private Timestamp endDate = new Timestamp(new java.util.Date().getTime());
+
+    /**
+     * readClientCompanies : demande la lecture des sociétés (true/false). Valeur par
+     * défaut : false.
+     * Remplace readCompanies.
+     */
+    private boolean readClientCompanies = false;
 
     /**
      * readCompanies : demande la lecture des sociétés (true/false). Valeur par
@@ -178,7 +186,7 @@ public class GetArgs {
                 }
             } else if (args[i].equals("-dbserver")) {
                 if (ip1 < n) {
-                    if (args[ip1].equals("pre-prod") || args[ip1].equals("prod")) {
+                    if (args[ip1].equals("pre-prod") || args[ip1].equals("prod") || args[ip1].equals("dev")) {
                         setDbServerType(args[ip1]);
                     } else {
                         throw new GetArgsException("Mauvaise base de données : " + args[ip1]);
@@ -211,6 +219,8 @@ public class GetArgs {
                 } else {
                     throw new GetArgsException("Date de fin non définie");
                 }
+            } else if (args[i].equals("-clientCompanies")) {
+                setReadClientCompanies(true);
             } else if (args[i].equals("-companies")) {
                 setReadCompanies(true);
             } else if (args[i].equals("-patrimonies")) {
@@ -241,7 +251,8 @@ public class GetArgs {
         System.out.println("Usage : java pi2a-client [-webserver prod|pre-prod]"
                 + " [-dbserver prod|pre-prod]"
                 + " [-b début] [-f fin]"
-                + " [-companies] [-patrimonies] [-providers] [-events]"
+                + " [-clientCompanies] [-companies] [-patrimonies] [-providers]"
+                + " [-events]"
                 + " [-d] [-t]");
     }
 
@@ -259,7 +270,23 @@ public class GetArgs {
         this.dbServerType = dbServerType;
     }
 
+   /**
+     * @return s'il faut lire ou non les sociétés.
+     * Remplace getReadCompanies()
+     */
+    public boolean getReadClientCompanies() {
+        return readClientCompanies;
+    }
+
     /**
+     * @param readClientCompanies demande ou non la lecture des sociétés.
+     * Remplace setReadCompanies()
+     */
+    public void setReadClientCompanies(boolean readClientCompanies) {
+        this.readClientCompanies = readClientCompanies;
+    }
+
+     /**
      * @return s'il faut lire ou non les sociétés
      */
     public boolean getReadCompanies() {
@@ -327,6 +354,7 @@ public class GetArgs {
                 + ", dbServerType:" + getDbServerType()
                 + ", début:" + MyDateFormat.format(getBegDate())
                 + ", fin:" + MyDateFormat.format(getEndDate())
+                + ", clientCompanies:" + getReadClientCompanies()
                 + ", companies:" + getReadCompanies()
                 + ", patrimonies:" + getReadPatrimonies()
                 + ", providers:" + getReadProviders()
