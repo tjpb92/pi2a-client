@@ -19,6 +19,9 @@ import bkgpi2a.LastRunDAO;
 import bkgpi2a.Patrimony;
 import bkgpi2a.PatrimonyContainer;
 import bkgpi2a.PatrimonyDAO;
+import bkgpi2a.ProviderCompany;
+import bkgpi2a.ProviderCompanyContainer;
+import bkgpi2a.ProviderCompanyDAO;
 import bkgpi2a.ProviderContact;
 import bkgpi2a.ProviderContactContainer;
 import bkgpi2a.ProviderContactDAO;
@@ -44,7 +47,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.47
+ * @version 0.15
  */
 public class Pi2aClient {
 
@@ -133,8 +136,8 @@ public class Pi2aClient {
         getArgs = new GetArgs(args);
         setWebServerType(getArgs.getWebServerType());
         setDbServerType(getArgs.getDbServerType());
-        setDebugMode(getArgs.getDebugMode());
-        setTestMode(getArgs.getTestMode());
+        debugMode = getArgs.getDebugMode();
+        testMode=getArgs.getTestMode();
 
         System.out.println("Lecture des paramètres d'exécution ...");
         applicationProperties = new ApplicationProperties("pi2a-client.prop");
@@ -146,7 +149,7 @@ public class Pi2aClient {
         }
         setWebId(applicationProperties);
         if (debugMode) {
-            System.out.println(getWebId());
+            System.out.println(webId);
         }
 
         System.out.println("Lecture des paramètres du serveur de base de données ...");
@@ -156,7 +159,7 @@ public class Pi2aClient {
         }
         setDbId(applicationProperties);
         if (debugMode) {
-            System.out.println(getDbId());
+            System.out.println(dbId);
         }
 
         System.out.println("Ouverture de la connexion au serveur de base de données : " + dbServer.getName());
@@ -166,7 +169,7 @@ public class Pi2aClient {
         mongoDatabase = mongoClient.getDatabase(dbServer.getDbName());
 
         System.out.println("Ouverture de la connexion au site Web : " + webServer.getName());
-        httpsClient = new HttpsClient(webServer.getIpAddress(), getWebId(), debugMode, testMode);
+        httpsClient = new HttpsClient(webServer.getIpAddress(), webId, debugMode, testMode);
 
         System.out.println("Authentification en cours ...");
         httpsClient.sendPost(HttpsClient.REST_API_PATH + HttpsClient.LOGIN_CMDE);
@@ -191,6 +194,10 @@ public class Pi2aClient {
             processProviderContacts(httpsClient, mongoDatabase);
         }
 
+        if (getArgs.getReadProviderCompanies()) {
+            System.out.println("Récupération des sociétés des intervenants ...");
+            processProviderCompanies(httpsClient, mongoDatabase);
+        }
         if (getArgs.getReadEvents()) {
             System.out.println("Récupération des événements ...");
             processEvents(httpsClient, mongoDatabase);
@@ -710,8 +717,58 @@ public class Pi2aClient {
                 System.out.println(nbProviderContacts + " contact(s) récupéréxe(s)");
                 for (ProviderContact providerContact : providerContactContainer.getProviderContactList()) {
                     i++;
-                    System.out.println(i + "  ProviderContact:" + providerContact.getLabel() + providerContact.getName());
+                    System.out.println(i + "  label:" + providerContact.getLabel() + ", name:" + providerContact.getName());
                     providerContactDAO.insert(providerContact);
+                }
+            } while (range.hasNext());
+        } catch (Exception ex) {
+            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Récupére les sociétés des intervenants enregistrées sur le site Web
+     *
+     * @param httpsClient connexion au site Web
+     * @param mongoDatabase connexion à la base de données locale
+     */
+    private void processProviderCompanies(HttpsClient httpsClient, MongoDatabase mongoDatabase) {
+        ObjectMapper objectMapper;
+        int nbProviderCompanies;
+        ProviderCompanyContainer providerCompanyContainer;
+        int i;
+        String command;
+        Range range;
+        ProviderCompanyDAO providerCompanyDAO;
+        String response;
+
+        providerCompanyDAO = new ProviderCompanyDAO(mongoDatabase);
+
+        System.out.println("Suppression des providerCompanies ...");
+        providerCompanyDAO.drop();
+        command = HttpsClient.REST_API_PATH + HttpsClient.PROVIDER_COMPANIES_CMDE;
+        if (debugMode) System.out.println("  Commande pour récupérer les providerCompanies : " + command);
+        objectMapper = new ObjectMapper();
+        range = new Range();
+        i = 0;
+        try {
+            do {
+                httpsClient.sendGet(command + "?range=" + range.getRange());
+                range.contentRange(httpsClient.getContentRange());
+                range.setPage(httpsClient.getAcceptRange());
+                if (debugMode) {
+                    System.out.println(range);
+                }
+                response = httpsClient.getResponse();
+                System.out.println("Réponse=" + response);
+                providerCompanyContainer = objectMapper.readValue(response, ProviderCompanyContainer.class);
+                nbProviderCompanies = providerCompanyContainer.getProviderCompanyList().size();
+                System.out.println(nbProviderCompanies + " société(s) récupéréxe(s)");
+                for (ProviderCompany providerCompany : providerCompanyContainer.getProviderCompanyList()) {
+                    i++;
+                    System.out.println(i + "  ProviderCompany:" + providerCompany.getName() +
+                            ", SIRET:" + providerCompany.getSiretNumber());
+                    providerCompanyDAO.insert(providerCompany);
                 }
             } while (range.hasNext());
         } catch (Exception ex) {
