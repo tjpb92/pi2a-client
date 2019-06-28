@@ -2,26 +2,26 @@
 
 Programme permettant d'importer des données depuis un extranet dans une base de données MongoDb locale.
 
-##Utilisation:
+## Utilisation:
 ```
-java pi2a-client [-webserver web] [-dbserver db] [-companies] [-patrimonies] [-providers] [-events] [-d] [-t] 
+java pi2a-client [-webserver web] [-dbserver db] [-clientCompanies] [-patrimonies] [-providers] [-events] [-d] [-t] 
 ```
 où :
-* ```-webserver web``` est la référence au serveur web distant, par défaut désigne le serveur de développement (paramètre optionnel).
-* ```-dbserver db``` est la référence à la base de données, par défaut désigne la base de données de développement. Voir fichier *pi2a-client.prop* (optionnel).
-* ```-companies``` demande la synchronisation des clients (paramètre optionnel).
+* ```-webserver web``` est la référence au serveur web distant, par défaut désigne le serveur de pré-production (paramètre optionnel).
+* ```-dbserver db``` est la référence à la base de données, par défaut désigne la base de données de pré-production. Voir fichier *pi2a-client.prop* (optionnel).
+* ```-clienCompanies``` demande la synchronisation des clients (paramètre optionnel).
 * ```-patrimonies``` demande la synchronisation des patrimoines (paramètre optionnel).
 * ```-providers``` demande la synchronisation des fournisseurs (paramètre optionnel).
 * ```-events``` demande la synchronisation des événements (paramètre optionnel).
 * ```-d``` le programme s'exécute en mode débug, il est beaucoup plus verbeux. Désactivé par défaut (paramètre optionnel).
 * ```-t``` le programme s'exécute en mode test, les transcations en base de données ne sont pas faites. Désactivé par défaut (paramètre optionnel).
 
-##Pré-requis :
+## Pré-requis :
 - Java 6 ou supérieur.
 - Driver Mongodb pour Java
 - Jackson
 
-##Références:
+## Références:
 
 http://websystique.com/java/json/jackson-convert-java-object-to-from-json/
 

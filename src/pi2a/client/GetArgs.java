@@ -10,7 +10,7 @@ import java.util.Date;
  * commande au programme pi2a-client.
  *
  * @author Thierry Baribaud
- * @version 0.15
+ * @version 0.16
  */
 public class GetArgs {
 
@@ -43,12 +43,6 @@ public class GetArgs {
      * Valeur par défaut : false. Remplace readCompanies.
      */
     private boolean readClientCompanies = false;
-
-    /**
-     * readCompanies : demande la lecture des sociétés (true/false). Valeur par
-     * défaut : false.
-     */
-    private boolean readCompanies = false;
 
     /**
      * readPatrimonies : demande la lecture des patrimoines (true/false). Valeur
@@ -226,8 +220,6 @@ public class GetArgs {
                 }
             } else if (args[i].equals("-clientCompanies")) {
                 readClientCompanies = true;
-            } else if (args[i].equals("-companies")) {
-                readCompanies = true;
             } else if (args[i].equals("-patrimonies")) {
                 readPatrimonies = true;
             } else if (args[i].equals("-providers")) {
@@ -291,20 +283,6 @@ public class GetArgs {
      */
     public void setReadClientCompanies(boolean readClientCompanies) {
         this.readClientCompanies = readClientCompanies;
-    }
-
-    /**
-     * @return s'il faut lire ou non les sociétés
-     */
-    public boolean getReadCompanies() {
-        return readCompanies;
-    }
-
-    /**
-     * @param readCompanies demande ou non la lecture des sociétés
-     */
-    public void setReadCompanies(boolean readCompanies) {
-        this.readCompanies = readCompanies;
     }
 
     /**
@@ -377,7 +355,6 @@ public class GetArgs {
                 + ", début:" + MyDateFormat.format(getBegDate())
                 + ", fin:" + MyDateFormat.format(getEndDate())
                 + ", clientCompanies:" + getReadClientCompanies()
-                + ", companies:" + getReadCompanies()
                 + ", patrimonies:" + getReadPatrimonies()
                 + ", providerCompanies:" + getReadProviderCompanies()
                 + ", providers:" + getReadProviders()
