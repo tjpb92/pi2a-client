@@ -4,13 +4,13 @@ Programme permettant d'importer des données depuis un extranet dans une base de
 
 ## Utilisation:
 ```
-java pi2a-client [-webserver web] [-dbserver db] [-clientCompanies] [-patrimonies] [-providers] [-events] [-d] [-t] 
+java pi2a-client [-webserver web] [-dbserver db] [-clientCompanies] [-patrimonies clientCompanyUuid] [-providers] [-events] [-d] [-t] 
 ```
 où :
 * ```-webserver web``` est la référence au serveur web distant, par défaut désigne le serveur de pré-production (paramètre optionnel).
 * ```-dbserver db``` est la référence à la base de données, par défaut désigne la base de données de pré-production. Voir fichier *pi2a-client.prop* (optionnel).
 * ```-clienCompanies``` demande la synchronisation des clients (paramètre optionnel).
-* ```-patrimonies``` demande la synchronisation des patrimoines (paramètre optionnel).
+* ```-patrimonies clientCompanyUuid``` demande la synchronisation des patrimoines du client ayant l'identifiant clientCompanyUuid (paramètre optionnel).
 * ```-providers``` demande la synchronisation des fournisseurs (paramètre optionnel).
 * ```-events``` demande la synchronisation des événements (paramètre optionnel).
 * ```-d``` le programme s'exécute en mode débug, il est beaucoup plus verbeux. Désactivé par défaut (paramètre optionnel).

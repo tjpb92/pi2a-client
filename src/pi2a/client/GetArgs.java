@@ -10,7 +10,7 @@ import java.util.Date;
  * commande au programme pi2a-client.
  *
  * @author Thierry Baribaud
- * @version 0.16
+ * @version 0.17
  */
 public class GetArgs {
 
@@ -50,6 +50,11 @@ public class GetArgs {
      */
     private boolean readPatrimonies = false;
 
+    /** clientCompanyUuid : identifiant du client pour lequel lire le patrimoine.
+     * Non définit par défaut.
+     */
+    private String clientCompanyUuid = null;
+    
     /**
      * readProviders : demande la lecture des fournisseurs (true/false). Valeur
      * par défaut : false.
@@ -222,6 +227,12 @@ public class GetArgs {
                 readClientCompanies = true;
             } else if (args[i].equals("-patrimonies")) {
                 readPatrimonies = true;
+                if (ip1 < n) {
+                    clientCompanyUuid = args[ip1];
+                    i = ip1;
+                } else {
+                    throw new GetArgsException("Identifiant du client non défini");
+                }
             } else if (args[i].equals("-providers")) {
                 readProviders = true;
             } else if (args[i].equals("-providerCompanies")) {
@@ -251,7 +262,7 @@ public class GetArgs {
                 + " [-dbserver prod|pre-prod]"
                 + " [-b début] [-f fin]"
                 + " [-clientCompanies] [-companies] [-patrimonies]"
-                + " [-providerCompanies] [-providers]"
+                + " [-providerCompanies clientCompanyUuid] [-providers]"
                 + " [-events]"
                 + " [-d] [-t]");
     }
@@ -297,6 +308,20 @@ public class GetArgs {
      */
     public void setReadPatrimonies(boolean readPatrimonies) {
         this.readPatrimonies = readPatrimonies;
+    }
+
+    /**
+     * @return l'identifiant du client
+     */
+    public String getClientCompanyUuid() {
+        return clientCompanyUuid;
+    }
+
+    /**
+     * @param clientCompanyUuid définit l'identifiant du client
+     */
+    public void setClientCompanyUuid(String clientCompanyUuid) {
+        this.clientCompanyUuid = clientCompanyUuid;
     }
 
     /**
@@ -357,10 +382,12 @@ public class GetArgs {
                 + ", clientCompanies:" + getReadClientCompanies()
                 + ", patrimonies:" + getReadPatrimonies()
                 + ", providerCompanies:" + getReadProviderCompanies()
+                + ", clientCompanyUuid:" + getClientCompanyUuid()
                 + ", providers:" + getReadProviders()
                 + ", events:" + getReadEvents()
                 + ", debugMode:" + getDebugMode()
                 + ", testMode:" + getTestMode()
                 + "}";
     }
+
 }

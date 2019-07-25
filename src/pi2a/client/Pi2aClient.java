@@ -44,7 +44,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.16
+ * @version 0.17
  */
 public class Pi2aClient {
 
@@ -178,7 +178,7 @@ public class Pi2aClient {
 
         if (getArgs.getReadPatrimonies()) {
             System.out.println("Récupération des patrimoines ...");
-            processPatrimonies(httpsClient, mongoDatabase);
+            processPatrimonies(httpsClient, mongoDatabase, getArgs.getClientCompanyUuid());
         }
 
         if (getArgs.getReadProviders()) {
@@ -566,20 +566,25 @@ public class Pi2aClient {
      * @param httpsClient connexion au site Web
      * @param mongoDatabase connexion à la base de données locale
      */
-    private void processPatrimonies(HttpsClient httpsClient, MongoDatabase mongoDatabase) {
+    private void processPatrimonies(HttpsClient httpsClient, MongoDatabase mongoDatabase, String clientCompanyUuid) {
         ObjectMapper objectMapper;
         int nbPatrimonies;
         int i;
         PatrimonyContainer patrimonyContainer;
-        String command;
+        StringBuffer command;
         Range range;
         PatrimonyDAO patrimonyDAO;
+        String separator = "?";
 
         patrimonyDAO = new PatrimonyDAO(mongoDatabase);
 
         System.out.println("Suppression des patrimoines ...");
         patrimonyDAO.drop();
-        command = HttpsClient.REST_API_PATH + HttpsClient.PATRIMONIES_CMDE;
+        command = new StringBuffer(HttpsClient.REST_API_PATH + HttpsClient.PATRIMONIES_CMDE);
+        if (clientCompanyUuid != null) {
+            command.append("?companyuid=").append(clientCompanyUuid);
+            separator = "&";
+        }
         if (debugMode) {
             System.out.println("  Commande pour récupérer les patrimoines : " + command);
         }
@@ -588,7 +593,7 @@ public class Pi2aClient {
         i = 0;
         try {
             do {
-                httpsClient.sendGet(command + "?range=" + range.getRange());
+                httpsClient.sendGet(command + separator + "range=" + range.getRange());
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
                 if (debugMode) {
