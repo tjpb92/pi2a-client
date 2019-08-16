@@ -22,6 +22,8 @@ import bkgpi2a.PatrimonyDAO;
 import bkgpi2a.ProviderContact;
 import bkgpi2a.ProviderContactContainer;
 import bkgpi2a.ProviderContactDAO;
+import bkgpi2a.ProviderContactQueryView;
+import bkgpi2a.ProviderContactResultView;
 import bkgpi2a.Range;
 import bkgpi2a.User;
 import bkgpi2a.UserContainer;
@@ -44,7 +46,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.17
+ * @version 0.18
  */
 public class Pi2aClient {
 
@@ -631,6 +633,8 @@ public class Pi2aClient {
         Range range;
         ProviderContactDAO providerContactDAO;
         String response;
+        ProviderContactResultView providerContactResultView;
+        ProviderContact providerContact;
 
         providerContactDAO = new ProviderContactDAO(mongoDatabase);
 
@@ -653,11 +657,16 @@ public class Pi2aClient {
                 }
                 response = httpsClient.getResponse();
                 System.out.println("Réponse=" + response);
-                providerContactContainer = objectMapper.readValue(response, ProviderContactContainer.class);
-                nbProviderContacts = providerContactContainer.getProviderContactList().size();
+//                providerContactContainer = objectMapper.readValue(response, ProviderContactContainer.class);
+//                nbProviderContacts = providerContactContainer.getProviderContactList().size();
+//                System.out.println(nbProviderContacts + " contact(s) récupéréxe(s)");
+//                for (ProviderContact providerContact : providerContactContainer.getProviderContactList()) {
+                providerContactResultView = objectMapper.readValue(response, ProviderContactResultView.class);
+                nbProviderContacts = providerContactResultView.getProviderContactQueryViewtList().size();
                 System.out.println(nbProviderContacts + " contact(s) récupéréxe(s)");
-                for (ProviderContact providerContact : providerContactContainer.getProviderContactList()) {
+                for (ProviderContactQueryView providerContactQueryView : providerContactResultView.getProviderContactQueryViewtList()) {
                     i++;
+                    providerContact = providerContactQueryView.getProviderContact();
                     System.out.println(i + "  label:" + providerContact.getLabel() + ", name:" + providerContact.getName());
                     providerContactDAO.insert(providerContact);
                 }
