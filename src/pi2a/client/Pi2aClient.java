@@ -20,8 +20,8 @@ import bkgpi2a.PatrimonyDAO;
 //import bkgpi2a.ProviderCompanyContainer;
 //import bkgpi2a.ProviderCompanyDAO;
 import bkgpi2a.ProviderContact;
-import bkgpi2a.ProviderContactContainer;
 import bkgpi2a.ProviderContactDAO;
+import bkgpi2a.ProviderContactDetailedQueryView;
 import bkgpi2a.ProviderContactQueryView;
 import bkgpi2a.ProviderContactResultView;
 import bkgpi2a.Range;
@@ -46,7 +46,7 @@ import utils.DBServerException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.18
+ * @version 0.19
  */
 public class Pi2aClient {
 
@@ -90,26 +90,6 @@ public class Pi2aClient {
 
     /**
      * Constructeur de la classe Pi2aClient
-     * <p>
-     * Les arguments en ligne de commande permettent de changer le mode de
-     * fonctionnement.</p><ul>
-     * <li>-webserver : référence au serveur web source, par défaut fait
-     * référence au serveur de pré-production (cf. fichier de paramètres
-     * <i>myDatabases.prop</i>) (optionnel)</li>
-     * <li>-dbserver : référence à la base de donnée, par défaut fait référence
-     * à la base de pré-production (cf. fichier de paramètres
-     * <i>myDatabases.prop</i> (optionnel)</li>
-     * <li>-b début : date de début de l'extraction à 0h, hier par défaut,
-     * format DD/MM/AAAA (optionnel).</li>
-     * <li>-b fin : date de fin de l'extraction à 0h, aujourd'hui par défaut,
-     * format DD/MM/AAAA (optionnel).</li>
-     * <li>-d : le programme fonctionne en mode débug le rendant plus verbeux,
-     * désactivé par défaut (optionnel).</li>
-     * <li>-t : le programme fonctionne en mode de test, les transactions en
-     * base de données ne sont pas exécutées, désactivé par défaut
-     * (optionnel).</li>
-     * </ul>
-     *
      * @param args arguments de la ligne de commande.
      * @throws java.io.IOException en cas d'erreur d'entrée/sortie.
      * @throws WebServerException en cas d'erreur avec le serveur Web.
@@ -183,7 +163,7 @@ public class Pi2aClient {
             processPatrimonies(httpsClient, mongoDatabase, getArgs.getClientCompanyUuid());
         }
 
-        if (getArgs.getReadProviders()) {
+        if (getArgs.getReadProviderContacts()) {
             System.out.println("Récupération des intervenants ...");
             processProviderContacts(httpsClient, mongoDatabase);
         }
@@ -627,7 +607,6 @@ public class Pi2aClient {
     private void processProviderContacts(HttpsClient httpsClient, MongoDatabase mongoDatabase) {
         ObjectMapper objectMapper;
         int nbProviderContacts;
-        ProviderContactContainer providerContactContainer;
         int i;
         String command;
         Range range;
@@ -657,20 +636,59 @@ public class Pi2aClient {
                 }
                 response = httpsClient.getResponse();
                 System.out.println("Réponse=" + response);
-//                providerContactContainer = objectMapper.readValue(response, ProviderContactContainer.class);
-//                nbProviderContacts = providerContactContainer.getProviderContactList().size();
-//                System.out.println(nbProviderContacts + " contact(s) récupéréxe(s)");
-//                for (ProviderContact providerContact : providerContactContainer.getProviderContactList()) {
                 providerContactResultView = objectMapper.readValue(response, ProviderContactResultView.class);
                 nbProviderContacts = providerContactResultView.getProviderContactQueryViewtList().size();
-                System.out.println(nbProviderContacts + " contact(s) récupéréxe(s)");
+                System.out.println(nbProviderContacts + " providerContact(s) récupéré(s)");
                 for (ProviderContactQueryView providerContactQueryView : providerContactResultView.getProviderContactQueryViewtList()) {
                     i++;
                     providerContact = providerContactQueryView.getProviderContact();
                     System.out.println(i + "  label:" + providerContact.getLabel() + ", name:" + providerContact.getName());
-                    providerContactDAO.insert(providerContact);
+                    processProviderContact(httpsClient, providerContact.getUid(), providerContactDAO);
                 }
             } while (range.hasNext());
+        } catch (Exception ex) {
+            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Récupére un intervenant enregistré sur le site Web
+     *
+     * @param httpsClient connexion au site Web
+     * @param uid identifiant de providerContact
+     * @param mongoDatabase connexion à la base de données locale
+     */
+    private void processProviderContact(HttpsClient httpsClient, String uid, ProviderContactDAO providerContactDAO) {
+        ObjectMapper objectMapper;
+        int nbProviderContacts;
+        String command;
+        Range range;
+        String response;
+        ProviderContactResultView providerContactResultView;
+        ProviderContact providerContact;
+        ProviderContactDetailedQueryView providerContactDetailedQueryView;
+
+        command = HttpsClient.REST_API_PATH + HttpsClient.PROVIDER_CONTACTS_CMDE + "/" + uid;
+        if (debugMode) {
+            System.out.println("  Commande pour récupérer le providerContact : " + command);
+        }
+        objectMapper = new ObjectMapper();
+//        range = new Range();
+        try {
+            httpsClient.sendGet(command);
+//            httpsClient.sendGet(command + "?range=" + range.getRange());
+//            range.contentRange(httpsClient.getContentRange());
+//            range.setPage(httpsClient.getAcceptRange());
+//            if (debugMode) {
+//                System.out.println(range);
+//            }
+            response = httpsClient.getResponse();
+            System.out.println("Réponse=" + response);
+            providerContactDetailedQueryView = objectMapper.readValue(response, ProviderContactDetailedQueryView.class);
+            providerContact = providerContactDetailedQueryView.getProviderContact();
+
+            System.out.println("    name:" + providerContact.getName());
+            providerContactDAO.insert(providerContact);
         } catch (Exception ex) {
             Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
         }

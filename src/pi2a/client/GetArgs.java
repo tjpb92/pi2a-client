@@ -10,7 +10,7 @@ import java.util.Date;
  * commande au programme pi2a-client.
  *
  * @author Thierry Baribaud
- * @version 0.17
+ * @version 0.19
  */
 public class GetArgs {
 
@@ -56,10 +56,10 @@ public class GetArgs {
     private String clientCompanyUuid = null;
     
     /**
-     * readProviders : demande la lecture des fournisseurs (true/false). Valeur
+     * readProviderContacts : demande la lecture des fournisseurs (true/false). Valeur
      * par défaut : false.
      */
-    private boolean readProviders = false;
+    private boolean readProviderContacts = false;
 
     /**
      * readProviderCompanies : demande la lecture des sociétés des fournisseurs
@@ -233,8 +233,8 @@ public class GetArgs {
                 } else {
                     throw new GetArgsException("Identifiant du client non défini");
                 }
-            } else if (args[i].equals("-providers")) {
-                readProviders = true;
+            } else if (args[i].equals("-providerContacts")) {
+                readProviderContacts = true;
             } else if (args[i].equals("-providerCompanies")) {
                 readProviderCompanies = true;
             } else if (args[i].equals("-events")) {
@@ -244,6 +244,7 @@ public class GetArgs {
             } else if (args[i].equals("-t")) {
                 testMode = true;
             } else {
+                usage();
                 throw new GetArgsException("Mauvais argument : " + args[i]);
             }
             i++;
@@ -261,8 +262,8 @@ public class GetArgs {
         System.out.println("Usage : java pi2a-client [-webserver prod|pre-prod]"
                 + " [-dbserver prod|pre-prod]"
                 + " [-b début] [-f fin]"
-                + " [-clientCompanies] [-companies] [-patrimonies]"
-                + " [-providerCompanies clientCompanyUuid] [-providers]"
+                + " [-clientCompanies] [-patrimonies]"
+                + " [-providerCompanies clientCompanyUuid] [-providerContacts]"
                 + " [-events]"
                 + " [-d] [-t]");
     }
@@ -327,15 +328,15 @@ public class GetArgs {
     /**
      * @return s'il faut lire ou non les fournisseurs
      */
-    public boolean getReadProviders() {
-        return readProviders;
+    public boolean getReadProviderContacts() {
+        return readProviderContacts;
     }
 
     /**
-     * @param readProviders demande ou non la lecture des fournisseurs
+     * @param readProviderContacts demande ou non la lecture des fournisseurs
      */
-    public void setReadProviders(boolean readProviders) {
-        this.readProviders = readProviders;
+    public void setReadProviderContacts(boolean readProviderContacts) {
+        this.readProviderContacts = readProviderContacts;
     }
 
     /**
@@ -383,7 +384,7 @@ public class GetArgs {
                 + ", patrimonies:" + getReadPatrimonies()
                 + ", providerCompanies:" + getReadProviderCompanies()
                 + ", clientCompanyUuid:" + getClientCompanyUuid()
-                + ", providers:" + getReadProviders()
+                + ", providerContacts:" + getReadProviderContacts()
                 + ", events:" + getReadEvents()
                 + ", debugMode:" + getDebugMode()
                 + ", testMode:" + getTestMode()
