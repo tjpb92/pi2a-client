@@ -40,6 +40,7 @@ import java.util.logging.Logger;
 import utils.ApplicationProperties;
 import utils.DBServer;
 import utils.DBServerException;
+import utils.GetArgsException;
 
 /**
  * pi2a-client, programme qui lit les données au travers de l'API Rest d'un

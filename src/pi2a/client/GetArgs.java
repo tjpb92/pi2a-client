@@ -4,13 +4,15 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import utils.Md5;
+import utils.GetArgsException;
 
 /**
  * Cette classe sert à vérifier et à récupérer les arguments passés en ligne de
  * commande au programme pi2a-client.
  *
  * @author Thierry Baribaud
- * @version 0.19
+ * @version 0.20
  */
 public class GetArgs {
 
@@ -39,6 +41,16 @@ public class GetArgs {
     private Timestamp endDate = new Timestamp(new java.util.Date().getTime());
 
     /**
+     * unum : référence au service d'urgence (identifiant interne)
+     */
+    private int unum;
+
+    /**
+     * clientCompanyUuid : identifiant universel unique du service d'urgence
+     */
+    private String clientCompanyUuid = null;
+
+    /**
      * readClientCompanies : demande la lecture des sociétés (true/false).
      * Valeur par défaut : false. Remplace readCompanies.
      */
@@ -50,14 +62,9 @@ public class GetArgs {
      */
     private boolean readPatrimonies = false;
 
-    /** clientCompanyUuid : identifiant du client pour lequel lire le patrimoine.
-     * Non définit par défaut.
-     */
-    private String clientCompanyUuid = null;
-    
     /**
-     * readProviderContacts : demande la lecture des fournisseurs (true/false). Valeur
-     * par défaut : false.
+     * readProviderContacts : demande la lecture des fournisseurs (true/false).
+     * Valeur par défaut : false.
      */
     private boolean readProviderContacts = false;
 
@@ -166,6 +173,8 @@ public class GetArgs {
         int n;
         int ip1;
         Date date;
+        String currentParam;
+        String nextParam;
 
         // Demande une analyse d'une date valide
         MyDateFormat.setLenient(false);
@@ -176,82 +185,119 @@ public class GetArgs {
         i = 0;
         while (i < n) {
 //            System.out.println("args[" + i + "]=" + Args[i]);
+            currentParam = args[i];
             ip1 = i + 1;
-            if (args[i].equals("-webserver")) {
-                if (ip1 < n) {
-                    if (args[ip1].equals("pre-prod") || args[ip1].equals("prod")) {
-                        webServerType = args[ip1];
-                    } else {
-                        throw new GetArgsException("Mauvais serveur web : " + args[ip1]);
-                    }
-                    i = ip1;
-                } else {
-                    throw new GetArgsException("Serveur Web non défini");
-                }
-            } else if (args[i].equals("-dbserver")) {
-                if (ip1 < n) {
-                    if (args[ip1].equals("pre-prod") || args[ip1].equals("prod") || args[ip1].equals("dev")) {
-                        dbServerType = args[ip1];
-                    } else {
-                        throw new GetArgsException("Mauvaise base de données : " + args[ip1]);
-                    }
-                    i = ip1;
-                } else {
-                    throw new GetArgsException("Base de données non définie");
-                }
-            } else if (args[i].equals("-b")) {
-                if (ip1 < n) {
-                    try {
-                        date = (Date) MyDateFormat.parse(args[ip1]);
-                        begDate = new Timestamp(date.getTime());
+            nextParam = (ip1 < n) ? args[ip1] : null;
+            switch (currentParam) {
+                case "-webserver":
+                    if (ip1 < n) {
+                        if (nextParam.equals("pre-prod") || nextParam.equals("prod")) {
+                            webServerType = nextParam;
+                        } else {
+                            throw new GetArgsException("Mauvais serveur web : " + nextParam);
+                        }
                         i = ip1;
-                    } catch (Exception exception) {
-                        throw new GetArgsException("La date de début doit être valide jj/mm/aaaa : " + args[ip1]);
+                    } else {
+                        throw new GetArgsException("Serveur Web non défini");
                     }
-                } else {
-                    throw new GetArgsException("Date de début non définie");
-                }
-            } else if (args[i].equals("-e")) {
-                if (ip1 < n) {
-                    try {
-                        date = (Date) MyDateFormat.parse(args[ip1]);
-                        endDate = new Timestamp(date.getTime());
+                    break;
+                case "-dbserver":
+                    if (ip1 < n) {
+                        if (nextParam.equals("pre-prod") || nextParam.equals("prod") || nextParam.equals("dev")) {
+                            dbServerType = nextParam;
+                        } else {
+                            throw new GetArgsException("Mauvaise base de données : " + nextParam);
+                        }
                         i = ip1;
-                    } catch (Exception exception) {
-                        throw new GetArgsException("La date de fin doit être valide jj/mm/aaaa : " + args[ip1]);
+                    } else {
+                        throw new GetArgsException("Base de données non définie");
                     }
-                } else {
-                    throw new GetArgsException("Date de fin non définie");
-                }
-            } else if (args[i].equals("-clientCompanies")) {
-                readClientCompanies = true;
-            } else if (args[i].equals("-patrimonies")) {
-                readPatrimonies = true;
-                if (ip1 < n) {
-                    clientCompanyUuid = args[ip1];
-                    i = ip1;
-                } else {
-                    throw new GetArgsException("Identifiant du client non défini");
-                }
-            } else if (args[i].equals("-providerContacts")) {
-                readProviderContacts = true;
-            } else if (args[i].equals("-providerCompanies")) {
-                readProviderCompanies = true;
-            } else if (args[i].equals("-events")) {
-                readEvents = true;
-            } else if (args[i].equals("-d")) {
-                debugMode = true;
-            } else if (args[i].equals("-t")) {
-                testMode = true;
-            } else {
-                usage();
-                throw new GetArgsException("Mauvais argument : " + args[i]);
+                    break;
+                case "-b":
+                    if (ip1 < n) {
+                        try {
+                            date = (Date) MyDateFormat.parse(nextParam);
+                            begDate = new Timestamp(date.getTime());
+                            i = ip1;
+                        } catch (Exception exception) {
+                            throw new GetArgsException("La date de début doit être valide jj/mm/aaaa : " + nextParam);
+                        }
+                    } else {
+                        throw new GetArgsException("Date de début non définie");
+                    }
+                    break;
+                case "-e":
+                    if (ip1 < n) {
+                        try {
+                            date = (Date) MyDateFormat.parse(nextParam);
+                            endDate = new Timestamp(date.getTime());
+                            i = ip1;
+                        } catch (Exception exception) {
+                            throw new GetArgsException("La date de fin doit être valide jj/mm/aaaa : " + nextParam);
+                        }
+                    } else {
+                        throw new GetArgsException("Date de fin non définie");
+                    }
+                    break;
+                case "-u":
+                    if (nextParam != null) {
+                        try {
+                            this.unum = Integer.parseInt(nextParam);
+                            i = ip1;
+                        } catch (Exception exception) {
+                            throw new GetArgsException("L'identifiant du service d'urgence doit être numérique : " + nextParam);
+                        }
+
+                    } else {
+                        throw new GetArgsException("ERREUR : Identifiant du service d'urgence non défini");
+                    }
+                    break;
+                case "-clientCompanyUuid":
+                    if (nextParam != null) {
+                        this.clientCompanyUuid = nextParam;
+                        i = ip1;
+                    } else {
+                        throw new GetArgsException("ERREUR : Identifiant UUID du service d'urgence non défini");
+                    }
+                    break;
+                case "-clientCompanies":
+                    readClientCompanies = true;
+                    break;
+                case "-patrimonies":
+                    readPatrimonies = true;
+                    break;
+                case "-providerContacts":
+                    readProviderContacts = true;
+                    break;
+                case "-providerCompanies":
+                    readProviderCompanies = true;
+                    break;
+                case "-events":
+                    readEvents = true;
+                    break;
+                case "-d":
+                    debugMode = true;
+                    break;
+                case "-t":
+                    testMode = true;
+                    break;
+                default:
+                    usage();
+                    throw new GetArgsException("Mauvais argument : " + currentParam);
             }
             i++;
         }
         if (begDate.after(endDate)) {
             throw new GetArgsException("La date de début " + MyDateFormat.format(begDate)
                     + " doit être antérieure à la date de fin " + MyDateFormat.format(endDate));
+        }
+        if (unum > 0) {
+            if (clientCompanyUuid != null) {
+                System.out.println("unum:" + unum + ", clientCompanyUuid:" + clientCompanyUuid);
+                throw new GetArgsException("ERREUR : Veuillez choisir unum ou uuid");
+            } else {
+                clientCompanyUuid = Md5.encode("u:" + unum);
+            }
         }
     }
 
@@ -263,7 +309,8 @@ public class GetArgs {
                 + " [-dbserver prod|pre-prod]"
                 + " [-b début] [-f fin]"
                 + " [-clientCompanies] [-patrimonies]"
-                + " [-providerCompanies clientCompanyUuid] [-providerContacts]"
+                + " [-providerCompanies] [-providerContacts]"
+                + " [-u unum|-clientCompany uuid]"
                 + " [-events]"
                 + " [-d] [-t]");
     }
@@ -309,6 +356,21 @@ public class GetArgs {
      */
     public void setReadPatrimonies(boolean readPatrimonies) {
         this.readPatrimonies = readPatrimonies;
+    }
+
+    /**
+     * @return retourne la référence au service d'urgence (identifiant interne)
+     */
+    public int getUnum() {
+        return unum;
+    }
+
+    /**
+     * @param unum définit la référence au service d'urgence (identifiant
+     * interne)
+     */
+    public void setUnum(int unum) {
+        this.unum = unum;
     }
 
     /**
@@ -383,6 +445,7 @@ public class GetArgs {
                 + ", clientCompanies:" + getReadClientCompanies()
                 + ", patrimonies:" + getReadPatrimonies()
                 + ", providerCompanies:" + getReadProviderCompanies()
+                + ", unum:" + unum
                 + ", clientCompanyUuid:" + getClientCompanyUuid()
                 + ", providerContacts:" + getReadProviderContacts()
                 + ", events:" + getReadEvents()
