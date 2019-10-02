@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package pi2a.client;
 
 import org.junit.AfterClass;
@@ -11,12 +6,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * Jeux de tests pour tester toute les classes du projet
+ * Jeux de tests pour tester toutes les classes du projet
  * @author Thierry Baribaud
- * @version 0.20
+ * @version 0.21
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({pi2a.client.DissociateProviderContactFromPatrimonyTest.class})
+@Suite.SuiteClasses({Bug190925Test.class, DissociateProviderContactFromPatrimonyTest.class})
 public class ClientSuite {
 
     @BeforeClass

@@ -9,6 +9,7 @@ import bkgpi2a.ClientCompanyDAO;
 import bkgpi2a.Event;
 import bkgpi2a.EventContainer;
 import bkgpi2a.EventDAO;
+import bkgpi2a.EventList;
 import bkgpi2a.HttpsClient;
 import bkgpi2a.Identifiants;
 import bkgpi2a.LastRun;
@@ -25,6 +26,7 @@ import bkgpi2a.ProviderContactDetailedQueryView;
 import bkgpi2a.ProviderContactQueryView;
 import bkgpi2a.ProviderContactResultView;
 import bkgpi2a.Range;
+import bkgpi2a.TicketEventResultView;
 import bkgpi2a.User;
 import bkgpi2a.UserContainer;
 import bkgpi2a.UserDAO;
@@ -47,7 +49,7 @@ import utils.GetArgsException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.19
+ * @version 0.21
  */
 public class Pi2aClient {
 
@@ -91,6 +93,7 @@ public class Pi2aClient {
 
     /**
      * Constructeur de la classe Pi2aClient
+     *
      * @param args arguments de la ligne de commande.
      * @throws java.io.IOException en cas d'erreur d'entrée/sortie.
      * @throws WebServerException en cas d'erreur avec le serveur Web.
@@ -752,9 +755,7 @@ public class Pi2aClient {
      */
     private void processEvents(HttpsClient httpsClient, MongoDatabase mongoDatabase) {
         ObjectMapper objectMapper;
-        int nbEvents;
         int i;
-        EventContainer eventContainer;
         String baseCommand;
         StringBuffer command;
         Range range;
@@ -764,11 +765,10 @@ public class Pi2aClient {
         LastRun thisRun;
         LastRun lastRun;
         LastRunDAO lastRunDAO;
-        String json;
-        JsonString jsonString;
         int responseCode;
-        Event event;
         Event sameEvent;
+        TicketEventResultView ticketEventResultView;
+        EventList events;
 
         eventDAO = new EventDAO(mongoDatabase);
         lastRunDAO = new LastRunDAO(mongoDatabase);
@@ -788,7 +788,6 @@ public class Pi2aClient {
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
-//        try {
         do {
             command = new StringBuffer(baseCommand);
             if (i > 0) {
@@ -802,7 +801,7 @@ public class Pi2aClient {
                 httpsClient.sendGet(command.toString());
                 responseCode = httpsClient.getResponseCode();
             } catch (Exception exception) {
-//                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, exception);
+//                Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, exception);
                 System.out.println("ERREUR : httpsClient.sendGet " + exception);
                 responseCode = 0;
             }
@@ -811,41 +810,30 @@ public class Pi2aClient {
                 range.contentRange(httpsClient.getContentRange());
                 range.setPage(httpsClient.getAcceptRange());
                 System.out.println(range);
-//                    eventContainer = objectMapper.readValue(httpsClient.getResponse(), EventContainer.class);
 
-                jsonString = new JsonString(httpsClient.getResponse());
+                try {
+                    ticketEventResultView = objectMapper.readValue(httpsClient.getResponse(), TicketEventResultView.class);
+                    events = ticketEventResultView.getEvents();
+                    System.out.println("nb event(s):" + events.size());
 
-//                    nbEvents = eventContainer.getEventList().size();
-//                    System.out.println(nbEvents + " événement(s) récupéré(s)");
-//                    for (Event event : eventContainer.getEventList()) {
-                while ((json = jsonString.next()) != null) {
-                    i++;
-                    try {
-                        event = objectMapper.readValue(json, Event.class);
+                    for (Event event : events) {
+                        i++;
                         System.out.println(i + ", event:" + event);
                         if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null) {
                             eventDAO.insert(event);
                         } else {
                             System.out.println("ERROR : événement rejeté car déjà lu");
                         }
-                    } catch (InvalidTypeIdException exception) {
-                        System.out.println("ERROR : événement inconnu " + exception);
-//                              Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-                    } catch (IOException exception) {
-//                            Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
-                        System.out.println("ERROR : IO exception on event " + exception);
                     }
+                } catch (InvalidTypeIdException exception) {
+                    System.out.println("ERROR : événement inconnu " + exception);
+//                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException exception) {
+//                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
+                    System.out.println("ERROR : IO exception on event " + exception);
                 }
             }
         } while (range.hasNext());
-//        } catch (InvalidTypeIdException ex) {
-//            System.out.println("ERROR : Unknow event " + ex);
-////            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-//        } catch (IOException ex) {
-//            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-//        } catch (Exception ex) {
-//            Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-//        }
     }
 
     /**
