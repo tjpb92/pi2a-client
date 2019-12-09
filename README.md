@@ -4,15 +4,15 @@ Programme permettant d'importer des données depuis un extranet dans une base de
 
 ## Utilisation:
 ```
-java pi2a-client [-webserver prod|pre-prod] [-dbserver prod|pre-prod] [-u unum|-clientCompany uuid] [-clientCompanies] [-patrimonies] [-providers] [-events] [-d] [-t] 
+java pi2a-client [-webserver webserver] [-dbserver dbserver] [-u unum|-clientCompany uuid] [-clientCompanies] [-patrimonies] [-providerContacts] [-events] [-d] [-t] 
 ```
 où :
-* ```-webserver prod|pre-prod``` est la référence au serveur web distant, par défaut désigne le serveur de pré-production. Voir fichier *pi2a-client.prop* (optionnel).
-* ```-dbserver prod|pre-prod``` est la référence à la base de données, par défaut désigne la base de données de pré-production. Voir fichier *pi2a-client.prop* (optionnel).
+* ```-webserver webserver``` est la référence au serveur web distant, par défaut désigne le serveur de pré-production. Voir fichier *pi2a-client.prop* (optionnel).
+* ```-dbserver dbserver``` est la référence à la base de données, par défaut désigne la base de données de pré-production. Voir fichier *pi2a-client.prop* (optionnel).
 * ```-u unum|-clientCompany uuid``` est l'identifiant unique du client (paramètre optionnel).
 * ```-clientCompanies``` demande la synchronisation des clients (paramètre optionnel).
 * ```-patrimonies``` demande la synchronisation des patrimoines (paramètre optionnel).
-* ```-providers``` demande la synchronisation des fournisseurs (paramètre optionnel).
+* ```-providerContacts``` demande la synchronisation des fournisseurs (paramètre optionnel).
 * ```-events``` demande la synchronisation des événements (paramètre optionnel).
 * ```-d``` le programme s'exécute en mode débug, il est beaucoup plus verbeux. Désactivé par défaut (paramètre optionnel).
 * ```-t``` le programme s'exécute en mode test, les transcations en base de données ne sont pas faites. Désactivé par défaut (paramètre optionnel).

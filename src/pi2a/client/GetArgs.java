@@ -1,5 +1,6 @@
 package pi2a.client;
 
+import utils.ValidServers;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -12,7 +13,7 @@ import utils.GetArgsException;
  * commande au programme pi2a-client.
  *
  * @author Thierry Baribaud
- * @version 0.20
+ * @version 0.22
  */
 public class GetArgs {
 
@@ -191,7 +192,7 @@ public class GetArgs {
             switch (currentParam) {
                 case "-webserver":
                     if (ip1 < n) {
-                        if (nextParam.equals("pre-prod") || nextParam.equals("prod")) {
+                        if (ValidServers.isAValidServer(nextParam)) {
                             webServerType = nextParam;
                         } else {
                             throw new GetArgsException("Mauvais serveur web : " + nextParam);
@@ -203,7 +204,7 @@ public class GetArgs {
                     break;
                 case "-dbserver":
                     if (ip1 < n) {
-                        if (nextParam.equals("pre-prod") || nextParam.equals("prod") || nextParam.equals("dev")) {
+                        if (ValidServers.isAValidServer(nextParam)) {
                             dbServerType = nextParam;
                         } else {
                             throw new GetArgsException("Mauvaise base de données : " + nextParam);
@@ -305,8 +306,8 @@ public class GetArgs {
      * Affiche le mode d'utilisation du programme.
      */
     public static void usage() {
-        System.out.println("Usage : java pi2a-client [-webserver prod|pre-prod]"
-                + " [-dbserver prod|pre-prod]"
+        System.out.println("Usage : java pi2a-client [-webserver webserver]"
+                + " [-dbserver dbserver]"
                 + " [-b début] [-f fin]"
                 + " [-clientCompanies] [-patrimonies]"
                 + " [-providerCompanies] [-providerContacts]"
