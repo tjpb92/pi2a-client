@@ -26,6 +26,9 @@ import bkgpi2a.ProviderContactDetailedQueryView;
 import bkgpi2a.ProviderContactQueryView;
 import bkgpi2a.ProviderContactResultView;
 import bkgpi2a.Range;
+import bkgpi2a.SimplifiedRequestResultView;
+import bkgpi2a.SimplifiedRequestSearchView;
+import bkgpi2a.SimplifiedRequestSearchViewList;
 import bkgpi2a.TicketEventResultView;
 import bkgpi2a.User;
 import bkgpi2a.UserContainer;
@@ -49,7 +52,7 @@ import utils.GetArgsException;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.21
+ * @version 0.23
  */
 public class Pi2aClient {
 
@@ -178,7 +181,12 @@ public class Pi2aClient {
 //        }
         if (getArgs.getReadEvents()) {
             System.out.println("Récupération des événements ...");
-            processEvents(httpsClient, mongoDatabase);
+            processEventsAndRequests(httpsClient, mongoDatabase);
+        }
+
+        if (getArgs.getReadSimplifiedRequests()) {
+            System.out.println("Récupération des demandes d'intervention ...");
+            processRequests(httpsClient, mongoDatabase, null, null);
         }
 
     }
@@ -753,24 +761,13 @@ public class Pi2aClient {
      * @param httpsClient connexion au site Web
      * @param mongoDatabase connexion à la base de données locale
      */
-    private void processEvents(HttpsClient httpsClient, MongoDatabase mongoDatabase) {
-        ObjectMapper objectMapper;
-        int i;
-        String baseCommand;
-        StringBuffer command;
-        Range range;
-        EventDAO eventDAO;
+    private void processEventsAndRequests(HttpsClient httpsClient, MongoDatabase mongoDatabase) {
         String from;
         String to;
         LastRun thisRun;
         LastRun lastRun;
         LastRunDAO lastRunDAO;
-        int responseCode;
-        Event sameEvent;
-        TicketEventResultView ticketEventResultView;
-        EventList events;
 
-        eventDAO = new EventDAO(mongoDatabase);
         lastRunDAO = new LastRunDAO(mongoDatabase);
 
         thisRun = new LastRun("pi2a-client");
@@ -781,6 +778,30 @@ public class Pi2aClient {
         from = lastRun.getLastRun();
         to = thisRun.getLastRun();
 
+        processEvents(httpsClient, mongoDatabase, from, to);
+        processRequests(httpsClient, mongoDatabase, from, to);
+
+    }
+
+    /**
+     * Récupére les événéments enregistrés sur le site Web
+     *
+     * @param httpsClient connexion au site Web
+     * @param mongoDatabase connexion à la base de données locale
+     */
+    private void processEvents(HttpsClient httpsClient, MongoDatabase mongoDatabase, String from, String to) {
+        ObjectMapper objectMapper;
+        int i;
+        String baseCommand;
+        StringBuffer command;
+        Range range;
+        int responseCode;
+        Event sameEvent;
+        TicketEventResultView ticketEventResultView;
+        EventList events;
+        EventDAO eventDAO;
+
+        eventDAO = new EventDAO(mongoDatabase);
         baseCommand = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
         if (debugMode) {
             System.out.println("  Commande pour récupérer les événements : " + baseCommand);
@@ -792,11 +813,13 @@ public class Pi2aClient {
             command = new StringBuffer(baseCommand);
             if (i > 0) {
                 command.append("?range=").append(range.getRange()).append("&");
-            } else {
-                command.append("?");
             }
-            command.append("from=").append(from);
-            command.append("&to=").append(to);
+            if (from != null) {
+                command.append("?from=").append(from);
+            }
+            if (to != null) {
+                command.append("&?to=").append(to);
+            }
             try {
                 httpsClient.sendGet(command.toString());
                 responseCode = httpsClient.getResponseCode();
@@ -827,6 +850,88 @@ public class Pi2aClient {
                     }
                 } catch (InvalidTypeIdException exception) {
                     System.out.println("ERROR : événement inconnu " + exception);
+//                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException exception) {
+//                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
+                    System.out.println("ERROR : IO exception on event " + exception);
+                }
+            }
+        } while (range.hasNext());
+    }
+
+    /**
+     * Récupére les demandes d'intervention émises depuis l'application mobile
+     *
+     * @param httpsClient connexion au site Web
+     * @param mongoDatabase connexion à la base de données locale
+     */
+    private void processRequests(HttpsClient httpsClient, MongoDatabase mongoDatabase, String from, String to) {
+        ObjectMapper objectMapper;
+        int i;
+        String baseCommand;
+        StringBuffer command;
+        Range range;
+        int responseCode;
+        Event sameEvent;
+        SimplifiedRequestResultView simplifiedRequestResultView;
+        EventList events;
+        EventDAO eventDAO;
+        SimplifiedRequestSearchViewList simplifiedRequestSearchViewList;
+
+        eventDAO = new EventDAO(mongoDatabase);
+        baseCommand = HttpsClient.REST_API_PATH + HttpsClient.REQUESTS_CMDE;
+        if (debugMode) {
+            System.out.println("  Commande pour récupérer les demandes d'intervention : " + baseCommand);
+        }
+        objectMapper = new ObjectMapper();
+        range = new Range();
+        i = 0;
+        do {
+            command = new StringBuffer(baseCommand);
+            if (i > 0) {
+                command.append("?range=").append(range.getRange()).append("&");
+            }
+            if (from != null) {
+                command.append("?from=").append(from);
+            }
+            if (to != null) {
+                command.append("&?to=").append(to);
+            }
+            try {
+                httpsClient.sendGet(command.toString());
+                responseCode = httpsClient.getResponseCode();
+            } catch (Exception exception) {
+//                Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, exception);
+                System.out.println("ERREUR : httpsClient.sendGet " + exception);
+                responseCode = 0;
+            }
+
+            if (responseCode == 200 || responseCode == 206) {
+//                System.out.println("Response:" + httpsClient.getResponse());
+                range.contentRange(httpsClient.getContentRange());
+                range.setPage(httpsClient.getAcceptRange());
+                System.out.println(range);
+
+                try {
+                    simplifiedRequestResultView = objectMapper.readValue(httpsClient.getResponse(), SimplifiedRequestResultView.class);
+                    System.out.println("simplifiedRequestResultView:" + simplifiedRequestResultView);
+                    simplifiedRequestSearchViewList = simplifiedRequestResultView.getSimplifiedRequestSearchViewList();
+                    System.out.println("nb request(s):" + simplifiedRequestSearchViewList.size());
+                    for (SimplifiedRequestSearchView simplifiedRequestSearchView : simplifiedRequestSearchViewList) {
+                        i++;
+                        System.out.println(i + ", request:" + simplifiedRequestSearchView);
+                    }
+//                    for (Event event : events) {
+//                        i++;
+//                        System.out.println(i + ", event:" + event);
+//                        if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null) {
+//                            eventDAO.insert(event);
+//                        } else {
+//                            System.out.println("ERROR : événement rejeté car déjà lu");
+//                        }
+//                    }
+                } catch (InvalidTypeIdException exception) {
+                    System.out.println("ERROR : demande d'intervention inconnu " + exception);
 //                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException exception) {
 //                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);

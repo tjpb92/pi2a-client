@@ -13,7 +13,7 @@ import utils.GetArgsException;
  * commande au programme pi2a-client.
  *
  * @author Thierry Baribaud
- * @version 0.22
+ * @version 0.23
  */
 public class GetArgs {
 
@@ -80,6 +80,12 @@ public class GetArgs {
      * défaut : false.
      */
     private boolean readEvents = false;
+
+    /**
+     * readRequests : demande la lecture des demandes d'intervention émises par
+     * l'application mobile (true/false). Valeur par défaut : false.
+     */
+    private boolean readSimplifiedRequests = false;
 
     /**
      * debugMode : fonctionnement du programme en mode debug (true/false).
@@ -276,6 +282,9 @@ public class GetArgs {
                 case "-events":
                     readEvents = true;
                     break;
+                case "-requests":
+                    readSimplifiedRequests = true;
+                    break;
                 case "-d":
                     debugMode = true;
                     break;
@@ -313,6 +322,7 @@ public class GetArgs {
                 + " [-providerCompanies] [-providerContacts]"
                 + " [-u unum|-clientCompany uuid]"
                 + " [-events]"
+                + " [-requests]"
                 + " [-d] [-t]");
     }
 
@@ -432,6 +442,22 @@ public class GetArgs {
     }
 
     /**
+     * @return s'il faut lire ou non les demandes d'intervention émises depuis
+     * l'application mobile
+     */
+    public boolean getReadSimplifiedRequests() {
+        return readSimplifiedRequests;
+    }
+
+    /**
+     * @param readSimplifiedRequests demande ou non la lecture des demandes
+     * d'intervention émises depuis l'application mobile
+     */
+    public void setReadSimplifiedRequests(boolean readSimplifiedRequests) {
+        this.readSimplifiedRequests = readSimplifiedRequests;
+    }
+
+    /**
      * Affiche le contenu de GetArgs.
      *
      * @return retourne le contenu de GetArgs.
@@ -450,6 +476,7 @@ public class GetArgs {
                 + ", clientCompanyUuid:" + getClientCompanyUuid()
                 + ", providerContacts:" + getReadProviderContacts()
                 + ", events:" + getReadEvents()
+                + ", requests:" + getReadSimplifiedRequests()
                 + ", debugMode:" + getDebugMode()
                 + ", testMode:" + getTestMode()
                 + "}";
