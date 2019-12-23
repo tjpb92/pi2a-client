@@ -26,6 +26,7 @@ import bkgpi2a.ProviderContactDetailedQueryView;
 import bkgpi2a.ProviderContactQueryView;
 import bkgpi2a.ProviderContactResultView;
 import bkgpi2a.Range;
+import bkgpi2a.SimplifiedRequestDetailedView;
 import bkgpi2a.SimplifiedRequestResultView;
 import bkgpi2a.SimplifiedRequestSearchView;
 import bkgpi2a.SimplifiedRequestSearchViewList;
@@ -40,19 +41,23 @@ import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import java.io.*;
+import java.util.Date;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import utils.ApplicationProperties;
 import utils.DBServer;
 import utils.DBServerException;
 import utils.GetArgsException;
+import javax.mail.internet.*;
+import javax.mail.*;
 
 /**
  * pi2a-client, programme qui lit les données au travers de l'API Rest d'un
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.23
+ * @version 0.24
  */
 public class Pi2aClient {
 
@@ -81,6 +86,11 @@ public class Pi2aClient {
      * MyDatabases.prop.
      */
     private Identifiants dbId;
+
+    /**
+     * Serveur de mail pour les notifications
+     */
+    private MailServer mailServer;
 
     /**
      * debugMode : fonctionnement du programme en mode debug (true/false).
@@ -146,6 +156,13 @@ public class Pi2aClient {
         setDbId(applicationProperties);
         if (debugMode) {
             System.out.println(dbId);
+        }
+
+        System.out.println("Lecture des paramètres du serveur de mail ...");
+        mailServer = new MailServer(applicationProperties);
+        System.out.println("Paramètres du serveur Mongo lus.");
+        if (debugMode) {
+            System.out.println(mailServer);
         }
 
         System.out.println("Ouverture de la connexion au serveur de base de données : " + dbServer.getName());
@@ -226,8 +243,11 @@ public class Pi2aClient {
      */
     @Override
     public String toString() {
-        return "Pi2aClient:{webServer=" + getWebServerType()
-                + ", dbServer=" + getDbServerType() + "}";
+        return "Pi2aClient:{" +
+                "webServer:" + getWebServerType() +
+                ", dbServer:" + getDbServerType() + 
+                ", mailServer:" + mailServer +
+                "}";
     }
 
     /**
@@ -920,6 +940,7 @@ public class Pi2aClient {
                     for (SimplifiedRequestSearchView simplifiedRequestSearchView : simplifiedRequestSearchViewList) {
                         i++;
                         System.out.println(i + ", request:" + simplifiedRequestSearchView);
+                        processRequest(httpsClient, mongoDatabase, simplifiedRequestSearchView);
                     }
 //                    for (Event event : events) {
 //                        i++;
@@ -939,6 +960,87 @@ public class Pi2aClient {
                 }
             }
         } while (range.hasNext());
+    }
+
+    /**
+     * Récupére une demande d'intervention
+     *
+     * @param httpsClient connexion au site Web
+     * @param mongoDatabase connexion à la base de données locale
+     */
+    private void processRequest(HttpsClient httpsClient, MongoDatabase mongoDatabase, SimplifiedRequestSearchView simplifiedRequestSearchView) {
+        ObjectMapper objectMapper;
+        String baseCommand;
+        StringBuffer command;
+        int responseCode;
+        Event sameEvent;
+        EventList events;
+        EventDAO eventDAO;
+        SimplifiedRequestSearchViewList simplifiedRequestSearchViewList;
+        SimplifiedRequestResultView simplifiedRequestResultView;
+        SimplifiedRequestDetailedView simplifiedRequestDetailedView;
+        String emails = "thierry.baribaud@anstel.com";
+
+        eventDAO = new EventDAO(mongoDatabase);
+        baseCommand = HttpsClient.REST_API_PATH + HttpsClient.REQUESTS_CMDE;
+        if (debugMode) {
+            System.out.println("  Commande pour récupérer une demande d'intervention : " + baseCommand);
+        }
+        objectMapper = new ObjectMapper();
+        command = new StringBuffer(baseCommand + "/" + simplifiedRequestSearchView.getUid());
+        try {
+            httpsClient.sendGet(command.toString());
+            responseCode = httpsClient.getResponseCode();
+        } catch (Exception exception) {
+//                Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, exception);
+            System.out.println("ERREUR : httpsClient.sendGet " + exception);
+            responseCode = 0;
+        }
+
+        if (responseCode == 200 || responseCode == 206) {
+            System.out.println("Response:" + httpsClient.getResponse());
+                try {
+                    simplifiedRequestDetailedView = objectMapper.readValue(httpsClient.getResponse(), SimplifiedRequestDetailedView.class);
+                    System.out.println("simplifiedRequestDetailedView:" + simplifiedRequestDetailedView);
+                    sendAlert(simplifiedRequestSearchView, simplifiedRequestDetailedView, emails);
+//                    simplifiedRequestSearchViewList = simplifiedRequestResultView.getSimplifiedRequestSearchViewList();
+//                    System.out.println("nb request(s):" + simplifiedRequestSearchViewList.size());
+//                    for (SimplifiedRequestSearchView simplifiedRequestSearchView : simplifiedRequestSearchViewList) {
+//                        i++;
+//                        System.out.println(i + ", request:" + simplifiedRequestSearchView);
+//                    }
+//                    for (Event event : events) {
+//                        i++;
+//                        System.out.println(i + ", event:" + event);
+//                        if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null) {
+//                            eventDAO.insert(event);
+//                        } else {
+//                            System.out.println("ERROR : événement rejeté car déjà lu");
+//                        }
+//                    }
+                } catch (InvalidTypeIdException exception) {
+                    System.out.println("ERROR : demande d'intervention inconnu " + exception);
+//                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException exception) {
+//                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
+                    System.out.println("ERROR : IO exception on event " + exception);
+                }
+        }
+
+    }
+
+    /**
+     * @return retourne le serveur de mail
+     */
+    public MailServer getMailServer() {
+        return mailServer;
+    }
+
+    /**
+     * @param mailServer définit le serveur de mail
+     */
+    public void setMailServer(MailServer mailServer) {
+        this.mailServer = mailServer;
     }
 
     /**
@@ -968,6 +1070,56 @@ public class Pi2aClient {
      */
     public boolean getTestMode() {
         return (testMode);
+    }
+    
+    /**
+     * Envoie une alerte par mail
+     */
+    private void sendAlert(SimplifiedRequestSearchView simplifiedRequestSearchView, SimplifiedRequestDetailedView simplifiedRequestDetailedView, String emails) {
+        String alertSubject = "Demande d'intervention via DeclarImmo";
+        StringBuffer alertMessage = null;
+        
+        try {
+            Properties properties = System.getProperties();
+            properties.put("mail.smtp.host", mailServer.getIpAddress());
+            Session session = Session.getDefaultInstance(properties, null);
+            javax.mail.Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(mailServer.getFromAddress()));
+            InternetAddress[] internetAddresses = new InternetAddress[1];
+//            internetAddresses[0] = new InternetAddress(mailServer.getToAddress());
+            internetAddresses[0] = new InternetAddress(emails);
+            message.setRecipients(javax.mail.Message.RecipientType.TO, internetAddresses);
+            
+            message.setSubject(alertSubject);
+            
+            alertMessage = new StringBuffer("Demande d'intervention via DeclarImmo").append(System.lineSeparator()).append(System.lineSeparator()).append(System.lineSeparator());
+            alertMessage.append("Client concerné : Nexity Tertiaire").append(System.lineSeparator());
+            alertMessage.append("Agence : Paris").append(System.lineSeparator()).append(System.lineSeparator());
+            alertMessage.append("Emise le : ").append(simplifiedRequestSearchView.getRequestDate()).append(System.lineSeparator());
+            alertMessage.append("Référence de la demande : ").append(simplifiedRequestSearchView.getUid()).append(" (à reporter sur Eole2)").append(System.lineSeparator());
+            alertMessage.append("Etat : ").append(simplifiedRequestSearchView.getState()).append(System.lineSeparator());
+            alertMessage.append("Motif : ").append(simplifiedRequestSearchView.getCategory().getLabel()).append(System.lineSeparator());
+            alertMessage.append("Demandeur : ").append(simplifiedRequestDetailedView.getRequester().getName()).append(System.lineSeparator());
+            alertMessage.append("Téléphone : ").append(System.lineSeparator());
+            alertMessage.append("Mail : ").append(System.lineSeparator());
+            alertMessage.append("Adresse : ").append(simplifiedRequestSearchView.getPatrimony().getName()).append(System.lineSeparator());
+            alertMessage.append("Référence adresse : ").append(simplifiedRequestSearchView.getPatrimony().getRef()).append(System.lineSeparator());
+            alertMessage.append("Commmentaires : ").append(simplifiedRequestDetailedView.getDescription()).append(System.lineSeparator()).append(System.lineSeparator());
+            alertMessage.append("Cordialement").append(System.lineSeparator()).append("L'équipe DeclarImmo").append(System.lineSeparator());
+            alertMessage.append(".").append(System.lineSeparator());
+            
+            message.setText(alertMessage.toString());
+            
+            message.setHeader("X-Mailer", "Java");
+            message.setSentDate(new Date());
+            session.setDebug(debugMode);
+            Transport.send(message);
+        } catch (AddressException exception) {
+            System.out.println("Problème avec une adresse mail " + exception);
+        } catch (MessagingException exception) {
+            System.out.println("Problème avec les mails " + exception);
+        }
+
     }
 
 }
