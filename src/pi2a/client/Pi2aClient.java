@@ -1,13 +1,15 @@
 package pi2a.client;
 
 import bkgpi2a.Agency;
+import bkgpi2a.AgencyAbstractList;
 import bkgpi2a.AgencyContainer;
 import bkgpi2a.AgencyDAO;
 import bkgpi2a.ClientCompany;
 import bkgpi2a.ClientCompanyContainer;
 import bkgpi2a.ClientCompanyDAO;
+import bkgpi2a.ContactMediumView;
+import bkgpi2a.ContactMediumViewList;
 import bkgpi2a.Event;
-import bkgpi2a.EventContainer;
 import bkgpi2a.EventDAO;
 import bkgpi2a.EventList;
 import bkgpi2a.HttpsClient;
@@ -57,7 +59,7 @@ import javax.mail.*;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.24
+ * @version 0.25
  */
 public class Pi2aClient {
 
@@ -1078,6 +1080,11 @@ public class Pi2aClient {
     private void sendAlert(SimplifiedRequestSearchView simplifiedRequestSearchView, SimplifiedRequestDetailedView simplifiedRequestDetailedView, String emails) {
         String alertSubject = "Demande d'intervention via DeclarImmo";
         StringBuffer alertMessage = null;
+        String agency = "non définie";
+        AgencyAbstractList agencies;
+        ContactMediumViewList medium;
+        String phone = "non défini";
+        String email = "non défini";
         
         try {
             Properties properties = System.getProperties();
@@ -1093,15 +1100,34 @@ public class Pi2aClient {
             message.setSubject(alertSubject);
             
             alertMessage = new StringBuffer("Demande d'intervention via DeclarImmo").append(System.lineSeparator()).append(System.lineSeparator()).append(System.lineSeparator());
-            alertMessage.append("Client concerné : Nexity Tertiaire").append(System.lineSeparator());
-            alertMessage.append("Agence : Paris").append(System.lineSeparator()).append(System.lineSeparator());
+            alertMessage.append("Client concerné : ").append(simplifiedRequestDetailedView.getLinkedEntities().getCompany().getName()).append(System.lineSeparator());
+
+//          On récupère dans un premier temps que la première agence, faire mieux plus tard            
+            if ((agencies=simplifiedRequestDetailedView.getLinkedEntities().getAgencies()) != null) {
+                if (agencies.size() > 0) {
+                    agency = agencies.get(0).getName();
+                }
+            }
+            alertMessage.append("Agence : ").append(agency).append(System.lineSeparator()).append(System.lineSeparator());
             alertMessage.append("Emise le : ").append(simplifiedRequestSearchView.getRequestDate()).append(System.lineSeparator());
             alertMessage.append("Référence de la demande : ").append(simplifiedRequestSearchView.getUid()).append(" (à reporter sur Eole2)").append(System.lineSeparator());
             alertMessage.append("Etat : ").append(simplifiedRequestSearchView.getState()).append(System.lineSeparator());
             alertMessage.append("Motif : ").append(simplifiedRequestSearchView.getCategory().getLabel()).append(System.lineSeparator());
             alertMessage.append("Demandeur : ").append(simplifiedRequestDetailedView.getRequester().getName()).append(System.lineSeparator());
-            alertMessage.append("Téléphone : ").append(System.lineSeparator());
-            alertMessage.append("Mail : ").append(System.lineSeparator());
+
+//          On récupére dans un premier temps le dernier numéro de téléphone et le dernier mail, faire mieux plus tard
+//          TODO : convertir le numéro de téléphone du format international au format local            
+            if ((medium=simplifiedRequestDetailedView.getRequester().getMedium()) != null) {
+                for (ContactMediumView contactMediumView : medium) {
+                    if (contactMediumView.getMediumType().equalsIgnoreCase("PHONE")) {
+                        phone = contactMediumView.getIdentifier();
+                    } else if (contactMediumView.getMediumType().equalsIgnoreCase("MAIL")) {
+                        email = contactMediumView.getIdentifier();
+                    }
+                }
+            }
+            alertMessage.append("Téléphone : ").append(phone).append(System.lineSeparator());
+            alertMessage.append("Mail : ").append(email).append(System.lineSeparator());
             alertMessage.append("Adresse : ").append(simplifiedRequestSearchView.getPatrimony().getName()).append(System.lineSeparator());
             alertMessage.append("Référence adresse : ").append(simplifiedRequestSearchView.getPatrimony().getRef()).append(System.lineSeparator());
             alertMessage.append("Commmentaires : ").append(simplifiedRequestDetailedView.getDescription()).append(System.lineSeparator()).append(System.lineSeparator());
