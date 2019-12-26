@@ -53,15 +53,25 @@ import utils.DBServerException;
 import utils.GetArgsException;
 import javax.mail.internet.*;
 import javax.mail.*;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 /**
  * pi2a-client, programme qui lit les données au travers de l'API Rest d'un
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.25
+ * @version 0.26
  */
 public class Pi2aClient {
+    
+    /**
+     * Pour convertir les datetimes du format texte au format DateTime et vice
+     * versa
+     */
+    private static final DateTimeFormatter isoDateTimeFormat1 = ISODateTimeFormat.dateTimeParser();
 
     /**
      * webServerType : prod pour le serveur de production, pre-prod pour le
@@ -1078,13 +1088,20 @@ public class Pi2aClient {
      * Envoie une alerte par mail
      */
     private void sendAlert(SimplifiedRequestSearchView simplifiedRequestSearchView, SimplifiedRequestDetailedView simplifiedRequestDetailedView, String emails) {
-        String alertSubject = "Demande d'intervention via DeclarImmo";
-        StringBuffer alertMessage = null;
+        String alertSubject;
+        StringBuffer alertMessage;
         String agency = "non définie";
         AgencyAbstractList agencies;
         ContactMediumViewList medium;
         String phone = "non défini";
         String email = "non défini";
+        DateTime dateTime;
+        DateTimeFormatter ddmmyy_hhmm = DateTimeFormat.forPattern("dd/MM/YY à HH:mm");
+        String requestDate;
+        String requester;
+        String category;
+        String reference;
+        String address;
         
         try {
             Properties properties = System.getProperties();
@@ -1097,6 +1114,13 @@ public class Pi2aClient {
             internetAddresses[0] = new InternetAddress(emails);
             message.setRecipients(javax.mail.Message.RecipientType.TO, internetAddresses);
             
+            dateTime = isoDateTimeFormat1.parseDateTime(simplifiedRequestSearchView.getRequestDate());
+            requestDate = dateTime.toString(ddmmyy_hhmm);
+            requester = simplifiedRequestDetailedView.getRequester().getName();
+            category = simplifiedRequestSearchView.getCategory().getLabel();
+            reference = simplifiedRequestSearchView.getPatrimony().getRef();
+            address = simplifiedRequestSearchView.getPatrimony().getName();
+            alertSubject = "DI DeclarImmo du " + requestDate + ", " + requester + ", " + category + ", ref:" + reference + ", " + address;
             message.setSubject(alertSubject);
             
             alertMessage = new StringBuffer("Demande d'intervention via DeclarImmo").append(System.lineSeparator()).append(System.lineSeparator()).append(System.lineSeparator());
@@ -1109,11 +1133,13 @@ public class Pi2aClient {
                 }
             }
             alertMessage.append("Agence : ").append(agency).append(System.lineSeparator()).append(System.lineSeparator());
-            alertMessage.append("Emise le : ").append(simplifiedRequestSearchView.getRequestDate()).append(System.lineSeparator());
+            
+            alertMessage.append("Emise le : ").append(requestDate).append(System.lineSeparator());
+            
             alertMessage.append("Référence de la demande : ").append(simplifiedRequestSearchView.getUid()).append(" (à reporter sur Eole2)").append(System.lineSeparator());
             alertMessage.append("Etat : ").append(simplifiedRequestSearchView.getState()).append(System.lineSeparator());
-            alertMessage.append("Motif : ").append(simplifiedRequestSearchView.getCategory().getLabel()).append(System.lineSeparator());
-            alertMessage.append("Demandeur : ").append(simplifiedRequestDetailedView.getRequester().getName()).append(System.lineSeparator());
+            alertMessage.append("Motif : ").append(category).append(System.lineSeparator());
+            alertMessage.append("Demandeur : ").append(requester).append(System.lineSeparator());
 
 //          On récupére dans un premier temps le dernier numéro de téléphone et le dernier mail, faire mieux plus tard
 //          TODO : convertir le numéro de téléphone du format international au format local            
@@ -1128,8 +1154,8 @@ public class Pi2aClient {
             }
             alertMessage.append("Téléphone : ").append(phone).append(System.lineSeparator());
             alertMessage.append("Mail : ").append(email).append(System.lineSeparator());
-            alertMessage.append("Adresse : ").append(simplifiedRequestSearchView.getPatrimony().getName()).append(System.lineSeparator());
-            alertMessage.append("Référence adresse : ").append(simplifiedRequestSearchView.getPatrimony().getRef()).append(System.lineSeparator());
+            alertMessage.append("Adresse : ").append(address).append(System.lineSeparator());
+            alertMessage.append("Référence adresse : ").append(reference).append(System.lineSeparator());
             alertMessage.append("Commmentaires : ").append(simplifiedRequestDetailedView.getDescription()).append(System.lineSeparator()).append(System.lineSeparator());
             alertMessage.append("Cordialement").append(System.lineSeparator()).append("L'équipe DeclarImmo").append(System.lineSeparator());
             alertMessage.append(".").append(System.lineSeparator());
