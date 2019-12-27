@@ -28,6 +28,7 @@ import bkgpi2a.ProviderContactDetailedQueryView;
 import bkgpi2a.ProviderContactQueryView;
 import bkgpi2a.ProviderContactResultView;
 import bkgpi2a.Range;
+import bkgpi2a.SimplifiedRequestDAO;
 import bkgpi2a.SimplifiedRequestDetailedView;
 import bkgpi2a.SimplifiedRequestResultView;
 import bkgpi2a.SimplifiedRequestSearchView;
@@ -40,6 +41,10 @@ import bkgpi2a.WebServer;
 import bkgpi2a.WebServerException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import java.io.*;
@@ -63,10 +68,10 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.26
+ * @version 0.27
  */
 public class Pi2aClient {
-    
+
     /**
      * Pour convertir les datetimes du format texte au format DateTime et vice
      * versa
@@ -255,11 +260,11 @@ public class Pi2aClient {
      */
     @Override
     public String toString() {
-        return "Pi2aClient:{" +
-                "webServer:" + getWebServerType() +
-                ", dbServer:" + getDbServerType() + 
-                ", mailServer:" + mailServer +
-                "}";
+        return "Pi2aClient:{"
+                + "webServer:" + getWebServerType()
+                + ", dbServer:" + getDbServerType()
+                + ", mailServer:" + mailServer
+                + "}";
     }
 
     /**
@@ -904,13 +909,13 @@ public class Pi2aClient {
         StringBuffer command;
         Range range;
         int responseCode;
-        Event sameEvent;
+        SimplifiedRequestSearchView sameSimplifiedRequestSearchView;
         SimplifiedRequestResultView simplifiedRequestResultView;
         EventList events;
-        EventDAO eventDAO;
+        SimplifiedRequestDAO simplifiedRequestDAO;
         SimplifiedRequestSearchViewList simplifiedRequestSearchViewList;
 
-        eventDAO = new EventDAO(mongoDatabase);
+        simplifiedRequestDAO = new SimplifiedRequestDAO(mongoDatabase);
         baseCommand = HttpsClient.REST_API_PATH + HttpsClient.REQUESTS_CMDE;
         if (debugMode) {
             System.out.println("  Commande pour récupérer les demandes d'intervention : " + baseCommand);
@@ -952,19 +957,15 @@ public class Pi2aClient {
                     for (SimplifiedRequestSearchView simplifiedRequestSearchView : simplifiedRequestSearchViewList) {
                         i++;
                         System.out.println(i + ", request:" + simplifiedRequestSearchView);
-                        processRequest(httpsClient, mongoDatabase, simplifiedRequestSearchView);
+                        if ((sameSimplifiedRequestSearchView = simplifiedRequestDAO.findOne(simplifiedRequestSearchView.getUid())) == null) {
+                            simplifiedRequestDAO.insert(simplifiedRequestSearchView);
+                            processRequest(httpsClient, mongoDatabase, simplifiedRequestSearchView);
+                        } else {
+                            System.out.println("ERROR : demande d'intervention rejetée car déjà lue");
+                        }
                     }
-//                    for (Event event : events) {
-//                        i++;
-//                        System.out.println(i + ", event:" + event);
-//                        if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null) {
-//                            eventDAO.insert(event);
-//                        } else {
-//                            System.out.println("ERROR : événement rejeté car déjà lu");
-//                        }
-//                    }
                 } catch (InvalidTypeIdException exception) {
-                    System.out.println("ERROR : demande d'intervention inconnu " + exception);
+                    System.out.println("ERROR : demande d'intervention inconnue " + exception);
 //                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException exception) {
 //                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -1011,10 +1012,10 @@ public class Pi2aClient {
 
         if (responseCode == 200 || responseCode == 206) {
             System.out.println("Response:" + httpsClient.getResponse());
-                try {
-                    simplifiedRequestDetailedView = objectMapper.readValue(httpsClient.getResponse(), SimplifiedRequestDetailedView.class);
-                    System.out.println("simplifiedRequestDetailedView:" + simplifiedRequestDetailedView);
-                    sendAlert(simplifiedRequestSearchView, simplifiedRequestDetailedView, emails);
+            try {
+                simplifiedRequestDetailedView = objectMapper.readValue(httpsClient.getResponse(), SimplifiedRequestDetailedView.class);
+                System.out.println("simplifiedRequestDetailedView:" + simplifiedRequestDetailedView);
+                sendAlert(simplifiedRequestSearchView, simplifiedRequestDetailedView, emails);
 //                    simplifiedRequestSearchViewList = simplifiedRequestResultView.getSimplifiedRequestSearchViewList();
 //                    System.out.println("nb request(s):" + simplifiedRequestSearchViewList.size());
 //                    for (SimplifiedRequestSearchView simplifiedRequestSearchView : simplifiedRequestSearchViewList) {
@@ -1030,13 +1031,13 @@ public class Pi2aClient {
 //                            System.out.println("ERROR : événement rejeté car déjà lu");
 //                        }
 //                    }
-                } catch (InvalidTypeIdException exception) {
-                    System.out.println("ERROR : demande d'intervention inconnu " + exception);
+            } catch (InvalidTypeIdException exception) {
+                System.out.println("ERROR : demande d'intervention inconnu " + exception);
 //                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IOException exception) {
+            } catch (IOException exception) {
 //                    Logger.getLogger(Pi2aClient.class.getName()).log(Level.SEVERE, null, ex);
-                    System.out.println("ERROR : IO exception on event " + exception);
-                }
+                System.out.println("ERROR : IO exception on event " + exception);
+            }
         }
 
     }
@@ -1083,7 +1084,7 @@ public class Pi2aClient {
     public boolean getTestMode() {
         return (testMode);
     }
-    
+
     /**
      * Envoie une alerte par mail
      */
@@ -1102,6 +1103,51 @@ public class Pi2aClient {
         String category;
         String reference;
         String address;
+        boolean isValid;
+
+        PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+
+//      Formatage de la date et de l'heure        
+        dateTime = isoDateTimeFormat1.parseDateTime(simplifiedRequestSearchView.getRequestDate());
+        requestDate = dateTime.toString(ddmmyy_hhmm);
+        requester = simplifiedRequestDetailedView.getRequester().getName();
+        category = simplifiedRequestSearchView.getCategory().getLabel();
+        reference = simplifiedRequestSearchView.getPatrimony().getRef();
+        address = simplifiedRequestSearchView.getPatrimony().getName();
+
+//      On récupére dans un premier temps le dernier numéro de téléphone et le dernier mail, faire mieux plus tard
+        if ((medium = simplifiedRequestDetailedView.getRequester().getMedium()) != null) {
+            for (ContactMediumView contactMediumView : medium) {
+                if (contactMediumView.getMediumType().equalsIgnoreCase("PHONE")) {
+                    phone = contactMediumView.getIdentifier();
+                } else if (contactMediumView.getMediumType().equalsIgnoreCase("MAIL")) {
+                    email = contactMediumView.getIdentifier();
+                }
+            }
+        }
+
+        if (!"non défini".equals(phone)) {
+            try {
+                PhoneNumber frNumberProto = phoneUtil.parse(phone, "FR");
+                System.out.println("  phone:" + phone);
+
+                if (phoneUtil.isValidNumber(frNumberProto)) {
+//                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.INTERNATIONAL));
+//                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL));
+//                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.E164));
+                    phone = phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL);
+                }
+            } catch (NumberParseException exception) {
+                System.err.println("NumberParseException was thrown: " + exception.toString());
+            }
+        }
+
+//          On récupère dans un premier temps que la première agence, faire mieux plus tard            
+        if ((agencies = simplifiedRequestDetailedView.getLinkedEntities().getAgencies()) != null) {
+            if (agencies.size() > 0) {
+                agency = agencies.get(0).getName();
+            }
+        }
         
         try {
             Properties properties = System.getProperties();
@@ -1113,55 +1159,29 @@ public class Pi2aClient {
 //            internetAddresses[0] = new InternetAddress(mailServer.getToAddress());
             internetAddresses[0] = new InternetAddress(emails);
             message.setRecipients(javax.mail.Message.RecipientType.TO, internetAddresses);
-            
-            dateTime = isoDateTimeFormat1.parseDateTime(simplifiedRequestSearchView.getRequestDate());
-            requestDate = dateTime.toString(ddmmyy_hhmm);
-            requester = simplifiedRequestDetailedView.getRequester().getName();
-            category = simplifiedRequestSearchView.getCategory().getLabel();
-            reference = simplifiedRequestSearchView.getPatrimony().getRef();
-            address = simplifiedRequestSearchView.getPatrimony().getName();
+
             alertSubject = "DI DeclarImmo du " + requestDate + ", " + requester + ", " + category + ", ref:" + reference + ", " + address;
             message.setSubject(alertSubject);
-            
+
             alertMessage = new StringBuffer("Demande d'intervention via DeclarImmo").append(System.lineSeparator()).append(System.lineSeparator()).append(System.lineSeparator());
             alertMessage.append("Client concerné : ").append(simplifiedRequestDetailedView.getLinkedEntities().getCompany().getName()).append(System.lineSeparator());
-
-//          On récupère dans un premier temps que la première agence, faire mieux plus tard            
-            if ((agencies=simplifiedRequestDetailedView.getLinkedEntities().getAgencies()) != null) {
-                if (agencies.size() > 0) {
-                    agency = agencies.get(0).getName();
-                }
-            }
             alertMessage.append("Agence : ").append(agency).append(System.lineSeparator()).append(System.lineSeparator());
-            
             alertMessage.append("Emise le : ").append(requestDate).append(System.lineSeparator());
-            
-            alertMessage.append("Référence de la demande : ").append(simplifiedRequestSearchView.getUid()).append(" (à reporter sur Eole2)").append(System.lineSeparator());
+            alertMessage.append("Référence de la demande : ").append(simplifiedRequestSearchView.getUid()).append(System.lineSeparator());
+            alertMessage.append("    (à reporter sur Eole2)").append(System.lineSeparator());
             alertMessage.append("Etat : ").append(simplifiedRequestSearchView.getState()).append(System.lineSeparator());
             alertMessage.append("Motif : ").append(category).append(System.lineSeparator());
             alertMessage.append("Demandeur : ").append(requester).append(System.lineSeparator());
-
-//          On récupére dans un premier temps le dernier numéro de téléphone et le dernier mail, faire mieux plus tard
-//          TODO : convertir le numéro de téléphone du format international au format local            
-            if ((medium=simplifiedRequestDetailedView.getRequester().getMedium()) != null) {
-                for (ContactMediumView contactMediumView : medium) {
-                    if (contactMediumView.getMediumType().equalsIgnoreCase("PHONE")) {
-                        phone = contactMediumView.getIdentifier();
-                    } else if (contactMediumView.getMediumType().equalsIgnoreCase("MAIL")) {
-                        email = contactMediumView.getIdentifier();
-                    }
-                }
-            }
             alertMessage.append("Téléphone : ").append(phone).append(System.lineSeparator());
             alertMessage.append("Mail : ").append(email).append(System.lineSeparator());
-            alertMessage.append("Adresse : ").append(address).append(System.lineSeparator());
             alertMessage.append("Référence adresse : ").append(reference).append(System.lineSeparator());
+            alertMessage.append("Adresse : ").append(address).append(System.lineSeparator());
             alertMessage.append("Commmentaires : ").append(simplifiedRequestDetailedView.getDescription()).append(System.lineSeparator()).append(System.lineSeparator());
             alertMessage.append("Cordialement").append(System.lineSeparator()).append("L'équipe DeclarImmo").append(System.lineSeparator());
             alertMessage.append(".").append(System.lineSeparator());
-            
+
             message.setText(alertMessage.toString());
-            
+
             message.setHeader("X-Mailer", "Java");
             message.setSentDate(new Date());
             session.setDebug(debugMode);

@@ -22,6 +22,7 @@ où :
 - Java 6 ou supérieur.
 - Driver Mongodb pour Java
 - Jackson
+- Formatage des numéros de téléphone : [libphonenumber-8.11.1.jar](https://github.com/google/libphonenumber)
 
 ## Références:
 
