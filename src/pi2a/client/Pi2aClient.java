@@ -68,7 +68,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.27
+ * @version 0.28
  */
 public class Pi2aClient {
 
@@ -914,12 +914,14 @@ public class Pi2aClient {
         EventList events;
         SimplifiedRequestDAO simplifiedRequestDAO;
         SimplifiedRequestSearchViewList simplifiedRequestSearchViewList;
+        String filter;
 
         simplifiedRequestDAO = new SimplifiedRequestDAO(mongoDatabase);
         baseCommand = HttpsClient.REST_API_PATH + HttpsClient.REQUESTS_CMDE;
         if (debugMode) {
             System.out.println("  Commande pour récupérer les demandes d'intervention : " + baseCommand);
         }
+        filter = "?state=Declared&state=Seen";
         objectMapper = new ObjectMapper();
         range = new Range();
         i = 0;
@@ -933,6 +935,9 @@ public class Pi2aClient {
             }
             if (to != null) {
                 command.append("&?to=").append(to);
+            }
+            if (filter != null) {
+                command.append(filter);
             }
             try {
                 httpsClient.sendGet(command.toString());
