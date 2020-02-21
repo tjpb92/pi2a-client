@@ -68,7 +68,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.28
+ * @version 0.29
  */
 public class Pi2aClient {
 
@@ -848,15 +848,14 @@ public class Pi2aClient {
         i = 0;
         do {
             command = new StringBuffer(baseCommand);
+// ATTENTION : logique à revoir, en l'état ce n'est pas correct            
             if (i > 0) {
                 command.append("?range=").append(range.getRange()).append("&");
+            } else {
+                command.append("?");
             }
-            if (from != null) {
-                command.append("?from=").append(from);
-            }
-            if (to != null) {
-                command.append("&?to=").append(to);
-            }
+            command.append("from=").append(from);
+            command.append("&to=").append(to);
             try {
                 httpsClient.sendGet(command.toString());
                 responseCode = httpsClient.getResponseCode();
@@ -927,15 +926,15 @@ public class Pi2aClient {
         i = 0;
         do {
             command = new StringBuffer(baseCommand);
-            if (i > 0) {
-                command.append("?range=").append(range.getRange()).append("&");
-            }
-            if (from != null) {
-                command.append("?from=").append(from);
-            }
-            if (to != null) {
-                command.append("&?to=").append(to);
-            }
+
+// ATTENTION : logique à revoir, en l'état ce n'est pas correct            
+//            if (i > 0) {
+//                command.append("?range=").append(range.getRange()).append("&");
+//            } else {
+//                command.append("?");
+//            }
+//            command.append("from=").append(from);
+//            command.append("&to=").append(to);
             if (filter != null) {
                 command.append(filter);
             }
@@ -997,7 +996,14 @@ public class Pi2aClient {
         SimplifiedRequestSearchViewList simplifiedRequestSearchViewList;
         SimplifiedRequestResultView simplifiedRequestResultView;
         SimplifiedRequestDetailedView simplifiedRequestDetailedView;
-        String emails = "thierry.baribaud@anstel.com";
+        String emails = mailServer.getToAddress();
+        
+        if (testMode || emails == null) {
+            emails = "appels.de.test@anstel.com";
+        }
+        if (debugMode) {
+            System.out.println("  Email send to " + emails);
+        }
 
         eventDAO = new EventDAO(mongoDatabase);
         baseCommand = HttpsClient.REST_API_PATH + HttpsClient.REQUESTS_CMDE;
