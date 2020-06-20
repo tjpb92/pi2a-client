@@ -68,7 +68,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.29
+ * @version 0.30
  */
 public class Pi2aClient {
 
@@ -76,7 +76,7 @@ public class Pi2aClient {
      * Pour convertir les datetimes du format texte au format DateTime et vice
      * versa
      */
-    private static final DateTimeFormatter isoDateTimeFormat1 = ISODateTimeFormat.dateTimeParser();
+    public static final DateTimeFormatter isoDateTimeFormat1 = ISODateTimeFormat.dateTimeParser();
 
     /**
      * webServerType : prod pour le serveur de production, pre-prod pour le
@@ -215,7 +215,7 @@ public class Pi2aClient {
 //        }
         if (getArgs.getReadEvents()) {
             System.out.println("Récupération des événements ...");
-            processEventsAndRequests(httpsClient, mongoDatabase);
+            processEventsAndRequests(httpsClient, mongoDatabase, getArgs.getBegdate(), getArgs.getEnddate());
         }
 
         if (getArgs.getReadSimplifiedRequests()) {
@@ -798,22 +798,22 @@ public class Pi2aClient {
      * @param httpsClient connexion au site Web
      * @param mongoDatabase connexion à la base de données locale
      */
-    private void processEventsAndRequests(HttpsClient httpsClient, MongoDatabase mongoDatabase) {
-        String from;
-        String to;
+    private void processEventsAndRequests(HttpsClient httpsClient, MongoDatabase mongoDatabase, String from, String to) {
         LastRun thisRun;
         LastRun lastRun;
         LastRunDAO lastRunDAO;
 
-        lastRunDAO = new LastRunDAO(mongoDatabase);
+        if (from == null && to == null) {
+            lastRunDAO = new LastRunDAO(mongoDatabase);
 
-        thisRun = new LastRun("pi2a-client");
-        lastRun = lastRunDAO.find("pi2a-client");
-        System.out.println("  " + lastRun + ", " + thisRun);
-        lastRunDAO.update(thisRun);
+            thisRun = new LastRun("pi2a-client");
+            lastRun = lastRunDAO.find("pi2a-client");
+            System.out.println("  " + lastRun + ", " + thisRun);
+            lastRunDAO.update(thisRun);
 
-        from = lastRun.getLastRun();
-        to = thisRun.getLastRun();
+            from = lastRun.getLastRun();
+            to = thisRun.getLastRun();
+        }
 
         processEvents(httpsClient, mongoDatabase, from, to);
         processRequests(httpsClient, mongoDatabase, from, to);

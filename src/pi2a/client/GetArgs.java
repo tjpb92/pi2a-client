@@ -1,10 +1,7 @@
 package pi2a.client;
 
 import utils.ValidServers;
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import org.joda.time.DateTime;
 import utils.Md5;
 import utils.GetArgsException;
 
@@ -13,11 +10,9 @@ import utils.GetArgsException;
  * commande au programme pi2a-client.
  *
  * @author Thierry Baribaud
- * @version 0.23
+ * @version 0.30
  */
 public class GetArgs {
-
-    private static final DateFormat MyDateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
     /**
      * webServerType : prod pour le serveur de production, pre-prod pour le
@@ -30,16 +25,6 @@ public class GetArgs {
      * serveur de pré-production. Valeur par défaut : pre-prod.
      */
     private String dbServerType = "pre-prod";
-
-    /**
-     * begDate : date de début de l'export à 0h. Valeur par défaut : la veille.
-     */
-    private Timestamp begDate = new Timestamp((new java.util.Date().getTime()) - 1000 * 60 * 60 * 24);
-
-    /**
-     * endDate : date de fin de l'export à 0h. Valeur par défaut : aujourd'hui.
-     */
-    private Timestamp endDate = new Timestamp(new java.util.Date().getTime());
 
     /**
      * unum : référence au service d'urgence (identifiant interne)
@@ -82,6 +67,16 @@ public class GetArgs {
     private boolean readEvents = false;
 
     /**
+     * Date de début au format ISO8601 (incluse). Non défini par défaut.
+     */
+    private String begdate = null;
+
+    /**
+     * Date de fin au format ISO8601 (exclue). Non défini par défaut.
+     */
+    private String enddate = null;
+
+    /**
      * readRequests : demande la lecture des demandes d'intervention émises par
      * l'application mobile (true/false). Valeur par défaut : false.
      */
@@ -107,17 +102,17 @@ public class GetArgs {
     }
 
     /**
-     * @return begDate : date de début de l'export à 0h.
+     * @return begDate : date de début de l'export (incluse)
      */
-    public Timestamp getBegDate() {
-        return (begDate);
+    public String getBegdate() {
+        return begdate;
     }
 
     /**
-     * @return endDate : date de fin de l'export à 0h.
+     * @return enddate : date de fin de l'export (excluse)
      */
-    public Timestamp getEndDate() {
-        return (endDate);
+    public String getEnddate() {
+        return enddate;
     }
 
     /**
@@ -142,17 +137,17 @@ public class GetArgs {
     }
 
     /**
-     * @param begDate : date de début de l'export à 0h.
+     * @param begdate : date de début de l'export (incluse)
      */
-    public void setBegDate(Timestamp begDate) {
-        this.begDate = begDate;
+    public void setBegdate(String begdate) {
+        this.begdate = begdate;
     }
 
     /**
-     * @param endDate : date de fin de l'export à 0h.
+     * @param enddate : date de fin de l'export (exclue)
      */
-    public void setEndDate(Timestamp endDate) {
-        this.endDate = endDate;
+    public void setEnddate(String enddate) {
+        this.enddate = enddate;
     }
 
     /**
@@ -179,12 +174,11 @@ public class GetArgs {
         int i;
         int n;
         int ip1;
-        Date date;
         String currentParam;
         String nextParam;
+        DateTime dateTime;
 
         // Demande une analyse d'une date valide
-        MyDateFormat.setLenient(false);
         n = args.length;
 
         System.out.println("nargs=" + n);
@@ -223,11 +217,11 @@ public class GetArgs {
                 case "-b":
                     if (ip1 < n) {
                         try {
-                            date = (Date) MyDateFormat.parse(nextParam);
-                            begDate = new Timestamp(date.getTime());
+                            dateTime = Pi2aClient.isoDateTimeFormat1.parseDateTime(nextParam);
+                            begdate = nextParam;
                             i = ip1;
                         } catch (Exception exception) {
-                            throw new GetArgsException("La date de début doit être valide jj/mm/aaaa : " + nextParam);
+                            throw new GetArgsException("La date de début doit être au format ISO8601 : " + nextParam);
                         }
                     } else {
                         throw new GetArgsException("Date de début non définie");
@@ -236,11 +230,11 @@ public class GetArgs {
                 case "-e":
                     if (ip1 < n) {
                         try {
-                            date = (Date) MyDateFormat.parse(nextParam);
-                            endDate = new Timestamp(date.getTime());
+                            dateTime = Pi2aClient.isoDateTimeFormat1.parseDateTime(nextParam);
+                            enddate = nextParam;
                             i = ip1;
                         } catch (Exception exception) {
-                            throw new GetArgsException("La date de fin doit être valide jj/mm/aaaa : " + nextParam);
+                            throw new GetArgsException("La date de fin doit être au format ISO8601 : " + nextParam);
                         }
                     } else {
                         throw new GetArgsException("Date de fin non définie");
@@ -297,10 +291,30 @@ public class GetArgs {
             }
             i++;
         }
-        if (begDate.after(endDate)) {
-            throw new GetArgsException("La date de début " + MyDateFormat.format(begDate)
-                    + " doit être antérieure à la date de fin " + MyDateFormat.format(endDate));
+
+        if (readEvents) {
+            if (begdate != null) {
+                if (enddate != null) {
+                    if (begdate.compareTo(enddate) > 0) {
+                        throw new GetArgsException("Date de début doit être antérieure à la date de fin");
+                    }
+                } else {
+                    throw new GetArgsException("Date de fin non définie");
+                }
+            } else {
+                if (enddate != null) {
+                    throw new GetArgsException("Date de début non définie");
+                }
+            }
+        } else {
+            if (begdate != null) {
+                throw new GetArgsException("Date de début interdite dans ce contexte");
+            }
+            if (enddate != null) {
+                throw new GetArgsException("Date de fin interdite dans ce contexte");
+            }
         }
+
         if (unum > 0) {
             if (clientCompanyUuid != null) {
                 System.out.println("unum:" + unum + ", clientCompanyUuid:" + clientCompanyUuid);
@@ -467,8 +481,6 @@ public class GetArgs {
         return "GetArg: {"
                 + "webServerType:" + getWebServerType()
                 + ", dbServerType:" + getDbServerType()
-                + ", début:" + MyDateFormat.format(getBegDate())
-                + ", fin:" + MyDateFormat.format(getEndDate())
                 + ", clientCompanies:" + getReadClientCompanies()
                 + ", patrimonies:" + getReadPatrimonies()
                 + ", providerCompanies:" + getReadProviderCompanies()
@@ -476,6 +488,8 @@ public class GetArgs {
                 + ", clientCompanyUuid:" + getClientCompanyUuid()
                 + ", providerContacts:" + getReadProviderContacts()
                 + ", events:" + getReadEvents()
+                + ", début:" + getBegdate()
+                + ", fin:" + getEnddate()
                 + ", requests:" + getReadSimplifiedRequests()
                 + ", debugMode:" + getDebugMode()
                 + ", testMode:" + getTestMode()
