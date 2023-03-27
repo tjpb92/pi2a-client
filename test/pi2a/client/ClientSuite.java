@@ -7,11 +7,16 @@ import org.junit.runners.Suite;
 
 /**
  * Jeux de tests pour tester toutes les classes du projet
+ *
  * @author Thierry Baribaud
- * @version 0.21
+ * @version 0.31
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({Bug190925Test.class, DissociateProviderContactFromPatrimonyTest.class})
+@Suite.SuiteClasses({
+    Bug190925Test.class,
+    DissociateProviderContactFromPatrimonyTest.class,
+    NotifyRepairRequestByMail_bug230321Test.class
+})
 public class ClientSuite {
 
     @BeforeClass
@@ -21,5 +26,5 @@ public class ClientSuite {
     @AfterClass
     public static void tearDownClass() throws Exception {
     }
-    
+
 }
