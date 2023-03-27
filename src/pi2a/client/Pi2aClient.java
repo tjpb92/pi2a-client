@@ -68,10 +68,19 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.30
+ * @version 0.31
  */
 public class Pi2aClient {
 
+    /**
+     * UUIDs for CBRE PM
+     * ATTENTION : Mauvaise pratique, à placer dans le fichier .prop à l'avenir.
+     */
+    public static final String CBRE_PM_UUID_PROD = "88938e96-b928-4dd2-9dde-b096ec3c73a3";
+    
+    // A confirmer ...
+    public static final String CBRE_PM_UUID_PRE_PROD = "db6e077f-5de8-49d6-a627-be6fdf4ae155";
+    
     /**
      * Pour convertir les datetimes du format texte au format DateTime et vice
      * versa
@@ -1114,7 +1123,7 @@ public class Pi2aClient {
         String category;
         String reference;
         String address;
-        boolean isValid;
+        String clientCompanyUUID = simplifiedRequestDetailedView.getLinkedEntities().getCompany().getUid();
 
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
 
@@ -1160,6 +1169,15 @@ public class Pi2aClient {
             }
         }
         
+//      If CBRE PM company, then do not send alert to call center
+//      ATTENTION : Mauvaise pratique, l'adresse mail est à placer dans le 
+//      fichier .prop à l'avenir
+        if (clientCompanyUUID.equals(Pi2aClient.CBRE_PM_UUID_PROD)
+                || clientCompanyUUID.equals(Pi2aClient.CBRE_PM_UUID_PRE_PROD)) {
+            emails = "thierry.baribaud@gmail.com";
+        }
+        System.out.println("emails:" + emails);
+
         try {
             Properties properties = System.getProperties();
             properties.put("mail.smtp.host", mailServer.getIpAddress());
