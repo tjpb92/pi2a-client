@@ -68,19 +68,20 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.31
+ * @version 0.32
  */
 public class Pi2aClient {
 
     /**
-     * UUIDs for CBRE PM
-     * ATTENTION : Mauvaise pratique, à placer dans le fichier .prop à l'avenir.
+     * UUIDs for CBRE PM ATTENTION : Mauvaise pratique, à placer dans le fichier
+     * .prop à l'avenir.
      */
     public static final String CBRE_PM_UUID_PROD = "88938e96-b928-4dd2-9dde-b096ec3c73a3";
-    
+
     // A confirmer ...
-    public static final String CBRE_PM_UUID_PRE_PROD = "db6e077f-5de8-49d6-a627-be6fdf4ae155";
-    
+//    public static final String CBRE_PM_UUID_PRE_PROD = "db6e077f-5de8-49d6-a627-be6fdf4ae155";
+    public static final String CBRE_PM_UUID_PRE_PROD = "4c54ef53-6ca2-41dd-84d3-b6b059eed30a";
+
     /**
      * Pour convertir les datetimes du format texte au format DateTime et vice
      * versa
@@ -919,7 +920,6 @@ public class Pi2aClient {
         int responseCode;
         SimplifiedRequestSearchView sameSimplifiedRequestSearchView;
         SimplifiedRequestResultView simplifiedRequestResultView;
-        EventList events;
         SimplifiedRequestDAO simplifiedRequestDAO;
         SimplifiedRequestSearchViewList simplifiedRequestSearchViewList;
         String filter;
@@ -969,12 +969,13 @@ public class Pi2aClient {
                     System.out.println("nb request(s):" + simplifiedRequestSearchViewList.size());
                     for (SimplifiedRequestSearchView simplifiedRequestSearchView : simplifiedRequestSearchViewList) {
                         i++;
-                        System.out.println(i + ", request:" + simplifiedRequestSearchView);
+//                        System.out.println(i + ", request:" + simplifiedRequestSearchView);
                         if ((sameSimplifiedRequestSearchView = simplifiedRequestDAO.findOne(simplifiedRequestSearchView.getUid())) == null) {
+                            System.out.println(i + ", request:" + simplifiedRequestSearchView);
                             simplifiedRequestDAO.insert(simplifiedRequestSearchView);
                             processRequest(httpsClient, mongoDatabase, simplifiedRequestSearchView);
                         } else {
-                            System.out.println("ERROR : demande d'intervention rejetée car déjà lue");
+                            System.out.println("ERROR : demande d'intervention " + simplifiedRequestSearchView.getUid() + " rejetée car déjà lue");
                         }
                     }
                 } catch (InvalidTypeIdException exception) {
@@ -1006,7 +1007,7 @@ public class Pi2aClient {
         SimplifiedRequestResultView simplifiedRequestResultView;
         SimplifiedRequestDetailedView simplifiedRequestDetailedView;
         String emails = mailServer.getToAddress();
-        
+
         if (testMode || emails == null) {
             emails = "appels.de.test@anstel.com";
         }
@@ -1168,7 +1169,7 @@ public class Pi2aClient {
                 agency = agencies.get(0).getName();
             }
         }
-        
+
 //      If CBRE PM company, then do not send alert to call center
 //      ATTENTION : Mauvaise pratique, l'adresse mail est à placer dans le 
 //      fichier .prop à l'avenir
