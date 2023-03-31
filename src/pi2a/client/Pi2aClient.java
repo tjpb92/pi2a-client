@@ -8,6 +8,7 @@ import bkgpi2a.ClientCompany;
 import bkgpi2a.ClientCompanyContainer;
 import bkgpi2a.ClientCompanyDAO;
 import bkgpi2a.ContactMediumView;
+import bkgpi2a.ContactMedium;
 import bkgpi2a.ContactMediumViewList;
 import bkgpi2a.Event;
 import bkgpi2a.EventDAO;
@@ -16,9 +17,11 @@ import bkgpi2a.HttpsClient;
 import bkgpi2a.Identifiants;
 import bkgpi2a.LastRun;
 import bkgpi2a.LastRunDAO;
+import bkgpi2a.Mail;
 import bkgpi2a.Patrimony;
 import bkgpi2a.PatrimonyContainer;
 import bkgpi2a.PatrimonyDAO;
+import bkgpi2a.Phone;
 //import bkgpi2a.ProviderCompany;
 //import bkgpi2a.ProviderCompanyContainer;
 //import bkgpi2a.ProviderCompanyDAO;
@@ -68,7 +71,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.32
+ * @version 0.32.1
  */
 public class Pi2aClient {
 
@@ -1036,22 +1039,7 @@ public class Pi2aClient {
             try {
                 simplifiedRequestDetailedView = objectMapper.readValue(httpsClient.getResponse(), SimplifiedRequestDetailedView.class);
                 System.out.println("simplifiedRequestDetailedView:" + simplifiedRequestDetailedView);
-                sendAlert(simplifiedRequestSearchView, simplifiedRequestDetailedView, emails);
-//                    simplifiedRequestSearchViewList = simplifiedRequestResultView.getSimplifiedRequestSearchViewList();
-//                    System.out.println("nb request(s):" + simplifiedRequestSearchViewList.size());
-//                    for (SimplifiedRequestSearchView simplifiedRequestSearchView : simplifiedRequestSearchViewList) {
-//                        i++;
-//                        System.out.println(i + ", request:" + simplifiedRequestSearchView);
-//                    }
-//                    for (Event event : events) {
-//                        i++;
-//                        System.out.println(i + ", event:" + event);
-//                        if ((sameEvent = eventDAO.findOne(event.getProcessUid())) == null) {
-//                            eventDAO.insert(event);
-//                        } else {
-//                            System.out.println("ERROR : événement rejeté car déjà lu");
-//                        }
-//                    }
+                sendAlert(mailServer, simplifiedRequestSearchView, simplifiedRequestDetailedView, emails, debugMode);
             } catch (InvalidTypeIdException exception) {
                 System.out.println("ERROR : demande d'intervention inconnu " + exception);
 //                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -1060,7 +1048,6 @@ public class Pi2aClient {
                 System.out.println("ERROR : IO exception on event " + exception);
             }
         }
-
     }
 
     /**
@@ -1109,7 +1096,11 @@ public class Pi2aClient {
     /**
      * Envoie une alerte par mail
      */
-    private void sendAlert(SimplifiedRequestSearchView simplifiedRequestSearchView, SimplifiedRequestDetailedView simplifiedRequestDetailedView, String emails) {
+    public static void sendAlert(MailServer mailServer, 
+            SimplifiedRequestSearchView simplifiedRequestSearchView, 
+            SimplifiedRequestDetailedView simplifiedRequestDetailedView, 
+            String emails,
+            boolean debugMode) {
         String alertSubject;
         StringBuffer alertMessage;
         String agency = "non définie";
@@ -1124,6 +1115,11 @@ public class Pi2aClient {
         String category;
         String reference;
         String address;
+//        String callbackName;
+//        String callbackPhone = "non défini";
+//        String callbackEmail = "non défini";
+//        ContactMedium callbackMedium;
+        
         String clientCompanyUUID = simplifiedRequestDetailedView.getLinkedEntities().getCompany().getUid();
 
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
@@ -1132,6 +1128,7 @@ public class Pi2aClient {
         dateTime = isoDateTimeFormat1.parseDateTime(simplifiedRequestSearchView.getRequestDate());
         requestDate = dateTime.toString(ddmmyy_hhmm);
         requester = simplifiedRequestDetailedView.getRequester().getName();
+//        callbackName = simplifiedRequestDetailedView.getContactToCallback().getName();
         category = simplifiedRequestSearchView.getCategory().getLabel();
         reference = simplifiedRequestSearchView.getPatrimony().getRef();
         address = simplifiedRequestSearchView.getPatrimony().getName();
@@ -1146,6 +1143,16 @@ public class Pi2aClient {
                 }
             }
         }
+        
+//        if ((callbackMedium = simplifiedRequestDetailedView.getContactToCallback().getMedium()) != null) {
+////            if (callbackMedium.getContactMediumType().equalsIgnoreCase("PHONE")) {
+//            if (callbackMedium instanceof Phone) {
+//                callbackPhone = ((Phone) callbackMedium).getPhone();
+////            } else if (callbackMedium.getContactMediumType().equalsIgnoreCase("MAIL")) {
+//            } else if (callbackMedium instanceof Mail) {
+//                callbackEmail = ((Mail) callbackMedium).getMail();
+//            }
+//        }
 
         if (!"non défini".equals(phone)) {
             try {
@@ -1162,6 +1169,22 @@ public class Pi2aClient {
                 System.err.println("NumberParseException was thrown: " + exception.toString());
             }
         }
+
+//        if (!"non défini".equals(callbackPhone)) {
+//            try {
+//                PhoneNumber frNumberProto = phoneUtil.parse(callbackPhone, "FR");
+//                System.out.println("  callbackPhone:" + callbackPhone);
+//
+//                if (phoneUtil.isValidNumber(frNumberProto)) {
+////                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.INTERNATIONAL));
+////                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL));
+////                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.E164));
+//                    callbackPhone = phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL);
+//                }
+//            } catch (NumberParseException exception) {
+//                System.err.println("NumberParseException was thrown: " + exception.toString());
+//            }
+//        }
 
 //          On récupère dans un premier temps que la première agence, faire mieux plus tard            
         if ((agencies = simplifiedRequestDetailedView.getLinkedEntities().getAgencies()) != null) {
@@ -1200,10 +1223,16 @@ public class Pi2aClient {
             alertMessage.append("Référence de la demande : ").append(simplifiedRequestSearchView.getUid()).append(System.lineSeparator());
             alertMessage.append("    (à reporter sur Eole2)").append(System.lineSeparator());
             alertMessage.append("Etat : ").append(simplifiedRequestSearchView.getState()).append(System.lineSeparator());
-            alertMessage.append("Motif : ").append(category).append(System.lineSeparator());
+            alertMessage.append("Motif : ").append(category).append(System.lineSeparator()).append(System.lineSeparator());
+            
             alertMessage.append("Demandeur : ").append(requester).append(System.lineSeparator());
-            alertMessage.append("Téléphone : ").append(phone).append(System.lineSeparator());
-            alertMessage.append("Mail : ").append(email).append(System.lineSeparator());
+            alertMessage.append("  Téléphone : ").append(phone).append(System.lineSeparator());
+            alertMessage.append("  Mail : ").append(email).append(System.lineSeparator()).append(System.lineSeparator());
+             
+//            alertMessage.append("Personne à rappeler : ").append(callbackName).append(System.lineSeparator());
+//            alertMessage.append("  Téléphone : ").append(callbackPhone).append(System.lineSeparator());
+//            alertMessage.append("  Mail : ").append(callbackEmail).append(System.lineSeparator()).append(System.lineSeparator());
+            
             alertMessage.append("Référence adresse : ").append(reference).append(System.lineSeparator());
             alertMessage.append("Adresse : ").append(address).append(System.lineSeparator());
             alertMessage.append("Commmentaires : ").append(simplifiedRequestDetailedView.getDescription()).append(System.lineSeparator()).append(System.lineSeparator());
