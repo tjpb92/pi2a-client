@@ -1,7 +1,6 @@
 package pi2a.client;
 
 import bkgpi2a.SimplifiedRequestDetailedView;
-import bkgpi2a.SimplifiedRequestSearchView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +23,7 @@ import utils.GetArgsException;
  * mars 2023 avec l'objet AgencyAbstract, issue#41.
  *
  * @author Thierry Baribaud
- * @version 0.32.2
+ * @version 0.32.3
  */
 public class NotifyRepairRequestByMail_bug230321Test {
 
@@ -105,29 +104,14 @@ public class NotifyRepairRequestByMail_bug230321Test {
 
         String filename = "SimplifiedRequestDetailedView_bug230321.json";
         SimplifiedRequestDetailedView simplifiedRequestDetailedView;
-        SimplifiedRequestSearchView simplifiedRequestSearchView = new SimplifiedRequestSearchView();
         String emails = mailServer.getToAddress();
 
         try {
             simplifiedRequestDetailedView = objectMapper.readValue(new File(filename), SimplifiedRequestDetailedView.class);
             System.out.println("simplifiedRequestDetailedView:" + simplifiedRequestDetailedView);
+            sendAlert(mailServer, simplifiedRequestDetailedView, emails, debugMode);
+            assertTrue(true);
             
-            // Artifice pour peupler simplifiedRequestSearchView à partir de simplifiedRequestDetailedView
-            simplifiedRequestSearchView.setRequestDate(simplifiedRequestDetailedView.getRequestDate());
-            simplifiedRequestSearchView.setCategory(simplifiedRequestDetailedView.getCategory());
-            simplifiedRequestSearchView.setPatrimony(simplifiedRequestDetailedView.getLinkedEntities().getPatrimony());
-            simplifiedRequestSearchView.setUid(simplifiedRequestDetailedView.getUid());
-            simplifiedRequestSearchView.setState(simplifiedRequestDetailedView.getState());
-            System.out.println("simplifiedRequestSearchView" + simplifiedRequestSearchView);
-
-            sendAlert(mailServer, simplifiedRequestSearchView, simplifiedRequestDetailedView, emails, debugMode);
-
-//            objectMapper.writeValue(new File(testFilename), simplifiedRequestDetailedView);
-//            expSimplifiedRequestDetailedView = objectMapper.readValue(new File(filename), SimplifiedRequestDetailedView.class);
-//            System.out.println("expSimplifiedRequestDetailedView:" + expSimplifiedRequestDetailedView);
-            assertNotNull(simplifiedRequestDetailedView);
-//            assertNotNull(expSimplifiedRequestDetailedView);
-//            assertEquals(simplifiedRequestDetailedView.toString(), expSimplifiedRequestDetailedView.toString());
         } catch (IOException ex) {
             Logger.getLogger(NotifyRepairRequestByMail_bug230321Test.class.getName()).log(Level.SEVERE, null, ex);
             fail(ex.getMessage());

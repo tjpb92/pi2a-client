@@ -8,7 +8,6 @@ import bkgpi2a.ClientCompany;
 import bkgpi2a.ClientCompanyContainer;
 import bkgpi2a.ClientCompanyDAO;
 import bkgpi2a.ContactMediumView;
-import bkgpi2a.ContactMedium;
 import bkgpi2a.ContactMediumViewList;
 import bkgpi2a.Event;
 import bkgpi2a.EventDAO;
@@ -17,11 +16,9 @@ import bkgpi2a.HttpsClient;
 import bkgpi2a.Identifiants;
 import bkgpi2a.LastRun;
 import bkgpi2a.LastRunDAO;
-import bkgpi2a.Mail;
 import bkgpi2a.Patrimony;
 import bkgpi2a.PatrimonyContainer;
 import bkgpi2a.PatrimonyDAO;
-import bkgpi2a.Phone;
 //import bkgpi2a.ProviderCompany;
 //import bkgpi2a.ProviderCompanyContainer;
 //import bkgpi2a.ProviderCompanyDAO;
@@ -71,7 +68,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.32.2
+ * @version 0.32.3
  */
 public class Pi2aClient {
 
@@ -1039,7 +1036,7 @@ public class Pi2aClient {
             try {
                 simplifiedRequestDetailedView = objectMapper.readValue(httpsClient.getResponse(), SimplifiedRequestDetailedView.class);
                 System.out.println("simplifiedRequestDetailedView:" + simplifiedRequestDetailedView);
-                sendAlert(mailServer, simplifiedRequestSearchView, simplifiedRequestDetailedView, emails, debugMode);
+                sendAlert(mailServer, simplifiedRequestDetailedView, emails, debugMode);
             } catch (InvalidTypeIdException exception) {
                 System.out.println("ERROR : demande d'intervention inconnu " + exception);
 //                    Logger.getLogger(HttpsClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -1096,13 +1093,11 @@ public class Pi2aClient {
     /**
      * Envoie une alerte par mail
      * @param mailServer serveur de messagerie pour l'envoi de l'alerte
-     * @param simplifiedRequestSearchView demande d'intervention résumée
      * @param simplifiedRequestDetailedView demande d'intervention détaillée
      * @param emails email vers qui envoyer l'alerte
      * @param debugMode mode débug ou non
      */
     public static void sendAlert(MailServer mailServer, 
-            SimplifiedRequestSearchView simplifiedRequestSearchView, 
             SimplifiedRequestDetailedView simplifiedRequestDetailedView, 
             String emails,
             boolean debugMode) {
@@ -1130,13 +1125,13 @@ public class Pi2aClient {
         PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
 
 //      Formatage de la date et de l'heure        
-        dateTime = isoDateTimeFormat1.parseDateTime(simplifiedRequestSearchView.getRequestDate());
+        dateTime = isoDateTimeFormat1.parseDateTime(simplifiedRequestDetailedView.getRequestDate());
         requestDate = dateTime.toString(ddmmyy_hhmm);
         requester = simplifiedRequestDetailedView.getRequester().getName();
 //        callbackName = simplifiedRequestDetailedView.getContactToCallback().getName();
-        category = simplifiedRequestSearchView.getCategory().getLabel();
-        reference = simplifiedRequestSearchView.getPatrimony().getRef();
-        address = simplifiedRequestSearchView.getPatrimony().getName();
+        category = simplifiedRequestDetailedView.getCategory().getLabel();
+        reference = simplifiedRequestDetailedView.getLinkedEntities().getPatrimony().getRef();
+        address = simplifiedRequestDetailedView.getLinkedEntities().getPatrimony().getName();
 
 //      On récupére dans un premier temps le dernier numéro de téléphone et le dernier mail, faire mieux plus tard
         if ((medium = simplifiedRequestDetailedView.getRequester().getMedium()) != null) {
@@ -1225,9 +1220,9 @@ public class Pi2aClient {
             alertMessage.append("Client concerné : ").append(simplifiedRequestDetailedView.getLinkedEntities().getCompany().getName()).append(System.lineSeparator());
             alertMessage.append("Agence : ").append(agency).append(System.lineSeparator()).append(System.lineSeparator());
             alertMessage.append("Emise le : ").append(requestDate).append(System.lineSeparator());
-            alertMessage.append("Référence de la demande : ").append(simplifiedRequestSearchView.getUid()).append(System.lineSeparator());
+            alertMessage.append("Référence de la demande : ").append(simplifiedRequestDetailedView.getUid()).append(System.lineSeparator());
             alertMessage.append("    (à reporter sur Eole2)").append(System.lineSeparator());
-            alertMessage.append("Etat : ").append(simplifiedRequestSearchView.getState()).append(System.lineSeparator());
+            alertMessage.append("Etat : ").append(simplifiedRequestDetailedView.getState()).append(System.lineSeparator());
             alertMessage.append("Motif : ").append(category).append(System.lineSeparator()).append(System.lineSeparator());
             
             alertMessage.append("Demandeur : ").append(requester).append(System.lineSeparator());
