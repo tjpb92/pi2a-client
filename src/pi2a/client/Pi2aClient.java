@@ -71,7 +71,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.32.1
+ * @version 0.32.2
  */
 public class Pi2aClient {
 
@@ -1095,6 +1095,11 @@ public class Pi2aClient {
 
     /**
      * Envoie une alerte par mail
+     * @param mailServer serveur de messagerie pour l'envoi de l'alerte
+     * @param simplifiedRequestSearchView demande d'intervention résumée
+     * @param simplifiedRequestDetailedView demande d'intervention détaillée
+     * @param emails email vers qui envoyer l'alerte
+     * @param debugMode mode débug ou non
      */
     public static void sendAlert(MailServer mailServer, 
             SimplifiedRequestSearchView simplifiedRequestSearchView, 
