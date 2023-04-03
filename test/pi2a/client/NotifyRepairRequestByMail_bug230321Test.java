@@ -1,6 +1,6 @@
 package pi2a.client;
 
-import bkgpi2a.SimplifiedRequestDetailedView;
+import com.anstel.simplifiedrequest.SimplifiedRequestDetailedView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
