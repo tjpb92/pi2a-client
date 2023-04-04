@@ -39,6 +39,9 @@ import bkgpi2a.UserContainer;
 import bkgpi2a.UserDAO;
 import bkgpi2a.WebServer;
 import bkgpi2a.WebServerException;
+import com.anstel.simplifiedrequest.ContactInfo;
+import com.anstel.simplifiedrequest.MailInfo;
+import com.anstel.simplifiedrequest.PhoneInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.google.i18n.phonenumbers.NumberParseException;
@@ -68,7 +71,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.32.3
+ * @version 0.32.5
  */
 public class Pi2aClient {
 
@@ -1115,10 +1118,10 @@ public class Pi2aClient {
         String category;
         String reference;
         String address;
-//        String callbackName;
-//        String callbackPhone = "non défini";
-//        String callbackEmail = "non défini";
-//        ContactMedium callbackMedium;
+        String callbackName;
+        String callbackPhone = "non défini";
+        String callbackEmail = "non défini";
+        ContactInfo callbackMedium;
         
         String clientCompanyUUID = simplifiedRequestDetailedView.getLinkedEntities().getCompany().getUid();
 
@@ -1128,7 +1131,7 @@ public class Pi2aClient {
         dateTime = isoDateTimeFormat1.parseDateTime(simplifiedRequestDetailedView.getRequestDate());
         requestDate = dateTime.toString(ddmmyy_hhmm);
         requester = simplifiedRequestDetailedView.getRequester().getName();
-//        callbackName = simplifiedRequestDetailedView.getContactToCallback().getName();
+        callbackName = simplifiedRequestDetailedView.getContactToCallback().getName();
         category = simplifiedRequestDetailedView.getCategory().getLabel();
         reference = simplifiedRequestDetailedView.getLinkedEntities().getPatrimony().getRef();
         address = simplifiedRequestDetailedView.getLinkedEntities().getPatrimony().getName();
@@ -1144,15 +1147,13 @@ public class Pi2aClient {
             }
         }
         
-//        if ((callbackMedium = simplifiedRequestDetailedView.getContactToCallback().getMedium()) != null) {
-////            if (callbackMedium.getContactMediumType().equalsIgnoreCase("PHONE")) {
-//            if (callbackMedium instanceof Phone) {
-//                callbackPhone = ((Phone) callbackMedium).getPhone();
-////            } else if (callbackMedium.getContactMediumType().equalsIgnoreCase("MAIL")) {
-//            } else if (callbackMedium instanceof Mail) {
-//                callbackEmail = ((Mail) callbackMedium).getMail();
-//            }
-//        }
+        if ((callbackMedium = simplifiedRequestDetailedView.getContactToCallback().getContact()) != null) {
+            if (callbackMedium instanceof PhoneInfo) {
+                callbackPhone = ((PhoneInfo) callbackMedium).getPhone();
+            } else if (callbackMedium instanceof MailInfo) {
+                callbackEmail = ((MailInfo) callbackMedium).getMail();
+            }
+        }
 
         if (!"non défini".equals(phone)) {
             try {
@@ -1170,21 +1171,21 @@ public class Pi2aClient {
             }
         }
 
-//        if (!"non défini".equals(callbackPhone)) {
-//            try {
-//                PhoneNumber frNumberProto = phoneUtil.parse(callbackPhone, "FR");
-//                System.out.println("  callbackPhone:" + callbackPhone);
-//
-//                if (phoneUtil.isValidNumber(frNumberProto)) {
-////                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.INTERNATIONAL));
-////                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL));
-////                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.E164));
-//                    callbackPhone = phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL);
-//                }
-//            } catch (NumberParseException exception) {
-//                System.err.println("NumberParseException was thrown: " + exception.toString());
-//            }
-//        }
+        if (!"non défini".equals(callbackPhone)) {
+            try {
+                PhoneNumber frNumberProto = phoneUtil.parse(callbackPhone, "FR");
+                System.out.println("  callbackPhone:" + callbackPhone);
+
+                if (phoneUtil.isValidNumber(frNumberProto)) {
+//                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.INTERNATIONAL));
+//                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL));
+//                    System.out.println(phoneUtil.format(frNumberProto, PhoneNumberFormat.E164));
+                    callbackPhone = phoneUtil.format(frNumberProto, PhoneNumberFormat.NATIONAL);
+                }
+            } catch (NumberParseException exception) {
+                System.err.println("NumberParseException was thrown: " + exception.toString());
+            }
+        }
 
 //          On récupère dans un premier temps que la première agence, faire mieux plus tard            
         if ((agencies = simplifiedRequestDetailedView.getLinkedEntities().getAgencies()) != null) {
@@ -1229,9 +1230,9 @@ public class Pi2aClient {
             alertMessage.append("  Téléphone : ").append(phone).append(System.lineSeparator());
             alertMessage.append("  Mail : ").append(email).append(System.lineSeparator()).append(System.lineSeparator());
              
-//            alertMessage.append("Personne à rappeler : ").append(callbackName).append(System.lineSeparator());
-//            alertMessage.append("  Téléphone : ").append(callbackPhone).append(System.lineSeparator());
-//            alertMessage.append("  Mail : ").append(callbackEmail).append(System.lineSeparator()).append(System.lineSeparator());
+            alertMessage.append("Personne à rappeler : ").append(callbackName).append(System.lineSeparator());
+            alertMessage.append("  Téléphone : ").append(callbackPhone).append(System.lineSeparator());
+            alertMessage.append("  Mail : ").append(callbackEmail).append(System.lineSeparator()).append(System.lineSeparator());
             
             alertMessage.append("Référence adresse : ").append(reference).append(System.lineSeparator());
             alertMessage.append("Adresse : ").append(address).append(System.lineSeparator());
