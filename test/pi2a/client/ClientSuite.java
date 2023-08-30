@@ -9,16 +9,18 @@ import org.junit.runners.Suite;
  * Jeux de tests pour tester toutes les classes du projet
  *
  * @author Thierry Baribaud
- * @version 0.32.7
+ * @version 0.32.8
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     Bug190925Test.class,
     Bug230728Test.class,
     DissociateProviderContactFromPatrimonyTest.class,
+    InterventionReportGottenFromProviderTest.class,
+    InterventionReportGottenFromResidentTest.class,
     NotifyRepairRequestByMail_bug230321Test.class,
-    ProviderIsGoingCheckedTest.class,
-    ProviderContactedCheckedTest.class
+    ProviderContactedCheckedTest.class,
+    ProviderIsGoingCheckedTest.class
 })
 public class ClientSuite {
 
