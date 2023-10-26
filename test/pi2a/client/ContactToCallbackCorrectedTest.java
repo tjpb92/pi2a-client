@@ -8,7 +8,6 @@ import bkgpi2a.Range;
 import bkgpi2a.TicketEventResultView;
 import bkgpi2a.WebServer;
 import bkgpi2a.WebServerException;
-import com.anstel.ticketEvents.TicketEventInformationsCorrected;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -21,20 +20,24 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import utils.ApplicationProperties;
+import com.anstel.ticketEvents.ContactToCallbackCorrected;
 
 /**
- * Programme permettant de tester le comportement du programme d'xtraction d'événements dans le cas du bug du 28 juillet 2023.
+ * Programme permettant de tester le comportement du programme d'extraction
+ * d'événements dans le cas du bug du 18 septembre 2023 avec la non détection de
+ * l'événnement ContactToCallbackCorrected.
+ *
  * @author Thierry Baribaud
  * @version 0.32.9
  */
-public class Bug230728Test {
-    
+public class ContactToCallbackCorrectedTest {
+
     /**
      * Common Jackson object mapper
      */
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    public Bug230728Test() {
+    public ContactToCallbackCorrectedTest() {
     }
 
     @BeforeClass
@@ -54,10 +57,12 @@ public class Bug230728Test {
     }
 
     /**
-     * Programme permettant de tester le comportement du programme d'xtraction d'événements dans le cas du bug du 28 juillet 2023.
+     * Programme permettant de tester le comportement du programme d'extraction
+     * d'événements dans le cas du bug du 18 septembre 2023 avec la non
+     * détection de l'événnement ContactToCallbackCorrected.
      */
     @Test
-    public void testBug230728() {
+    public void testContactToCallback() {
         String[] args = {"-webserver", "prod2", "-dbserver", "pre-prod", "-d"};
         GetArgs getArgs;
         WebServer webServer;
@@ -78,9 +83,9 @@ public class Bug230728Test {
 //        JsonString jsonString;
 //        String json;
         int i;
-        TicketEventInformationsCorrected ticketEventInformationsCorrected;
-       
-        System.out.println("Bug230728");
+        ContactToCallbackCorrected contactToCallbackCorrected;
+
+        System.out.println("ContactToCallbackTest");
 
         try {
             System.out.println("Analyse des arguments de la ligne de commande ...");
@@ -97,7 +102,7 @@ public class Bug230728Test {
             if (debugMode) {
                 System.out.println(webServer);
             }
-            
+
             value = applicationProperties.getProperty(getArgs.getWebServerType() + ".webserver.login");
             if (value != null) {
                 identifiants.setLogin(value);
@@ -114,19 +119,15 @@ public class Bug230728Test {
             if (debugMode) {
                 System.out.println(identifiants);
             }
-            
+
             System.out.println("Ouverture de la connexion au site Web : " + webServer.getName());
             httpsClient = new HttpsClient(webServer.getIpAddress(), identifiants, debugMode, false);
 
             System.out.println("Authentification en cours ...");
             httpsClient.sendPost(HttpsClient.REST_API_PATH + HttpsClient.LOGIN_CMDE);
-            
-//            from = "2023-07-28T09:09:10Z";
-//            to = "2023-07-28T09:10:16Z";
 
-// from=2023-07-31T08:15:15Z&to=2023-07-31T08:16:19Z            
-            from = "2023-07-31T08:15:15Z";
-            to = "2023-07-31T08:16:19Z";
+            from = "2023-09-18T08:23:50Z";
+            to = "2023-09-18T08:24:10Z";
             baseCommand = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
             if (debugMode) {
                 System.out.println("  Commande pour récupérer les événements : " + baseCommand);
@@ -150,16 +151,16 @@ public class Bug230728Test {
             ticketEventResultView = objectMapper.readValue(response, TicketEventResultView.class);
             events = ticketEventResultView.getEvents();
             System.out.println("  nb event(s):" + events.size());
-            i=0;
-            for(Event event:events) {
+            i = 0;
+            for (Event event : events) {
                 i++;
-                System.out.println("  event(" + i + "), processUid:" + event.getProcessUid() + ", date:" + event.getDate() + ", eventType:" + event.getEventType() );
-                if (event instanceof TicketEventInformationsCorrected) {
-                    ticketEventInformationsCorrected = (TicketEventInformationsCorrected) event;
-                    System.out.println("    " + ticketEventInformationsCorrected);
+                System.out.println("  event(" + i + "), processUid:" + event.getProcessUid() + ", date:" + event.getDate() + ", eventType:" + event.getEventType());
+                if (event instanceof ContactToCallbackCorrected) {
+                    contactToCallbackCorrected = (ContactToCallbackCorrected) event;
+                    System.out.println("    " + contactToCallbackCorrected);
                 }
             }
-            
+
             // Ce qui suit est bugué !!!
 //            jsonString = new JsonString(response);
 //            i=0;
@@ -167,12 +168,11 @@ public class Bug230728Test {
 //                i++;
 //                System.out.println("  json(" + i + "):" + json);
 //            }
-            
         } catch (utils.GetArgsException | IOException | WebServerException ex) {
-            Logger.getLogger(Bug230728Test.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ContactToCallbackCorrectedTest.class.getName()).log(Level.SEVERE, null, ex);
             fail(ex.getMessage());
         } catch (Exception ex) {
-            Logger.getLogger(Bug230728Test.class.getName()).log(Level.SEVERE, null, ex);
-        } 
+            Logger.getLogger(ContactToCallbackCorrectedTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

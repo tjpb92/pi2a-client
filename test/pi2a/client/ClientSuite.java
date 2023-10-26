@@ -9,12 +9,13 @@ import org.junit.runners.Suite;
  * Jeux de tests pour tester toutes les classes du projet
  *
  * @author Thierry Baribaud
- * @version 0.32.8
+ * @version 0.32.9
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     Bug190925Test.class,
     Bug230728Test.class,
+    ContactToCallbackCorrectedTest.class,
     DissociateProviderContactFromPatrimonyTest.class,
     InterventionReportGottenFromProviderTest.class,
     InterventionReportGottenFromResidentTest.class,
