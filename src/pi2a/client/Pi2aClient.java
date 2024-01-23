@@ -71,7 +71,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * serveur Web et les importe dans une base de données MongoDb locale.
  *
  * @author Thierry Baribaud.
- * @version 0.32.6
+ * @version 0.32.12
  */
 public class Pi2aClient {
 
@@ -887,7 +887,12 @@ public class Pi2aClient {
                 try {
                     response = httpsClient.getResponse();
                     System.out.println("Response:" + response);
-                    
+
+// Voir https://www.baeldung.com/jackson-deserialize-json-unknown-properties
+// new ObjectMapper()
+//  .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+// Avantage : ne planterait plus, inconvénients : on ne voit plus les erreurs
+
                     ticketEventResultView = objectMapper.readValue(response, TicketEventResultView.class);
                     events = ticketEventResultView.getEvents();
                     System.out.println("nb event(s):" + events.size());

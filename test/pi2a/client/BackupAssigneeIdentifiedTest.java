@@ -15,26 +15,29 @@ import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import utils.ApplicationProperties;
+import com.anstel.ticketEvents.BackupAssigneeIdentified;
 
 /**
- * Programme permettant de si l’on peut avoir deux connexions HTTPS ouvertes en
- * même temps et sans interférence.
+ * Programme permettant de tester le comportement du programme d'extraction
+ * d'événements dans le cas du bug du 19 janvier 2024 avec la non détection de
+ * l'événnement BackupAssigneeIdentified.
  *
  * @author Thierry Baribaud
- * @version 0.32.11
+ * @version 0.32.12
  */
-public class DoubleHttpsClientTest {
+public class BackupAssigneeIdentifiedTest {
 
     /**
      * Common Jackson object mapper
      */
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    public DoubleHttpsClientTest() {
+    public BackupAssigneeIdentifiedTest() {
     }
 
     @BeforeClass
@@ -54,12 +57,13 @@ public class DoubleHttpsClientTest {
     }
 
     /**
-     * Programme permettant de si l’on peut avoir deux connexions HTTPS ouvertes
-     * en même temps et sans interférence.
+     * Programme permettant de tester le comportement du programme d'extraction
+     * d'événements dans le cas du bug du 19 janvier 2024 avec la non
+     * détection de l'événnement BackupAssigneeIdentified.
      */
     @Test
-    public void testDoubleHttpsClient() {
-        String[] args = {"-webserver", "prod2", "-d"};
+    public void testContactToCallback() {
+        String[] args = {"-webserver", "prod2", "-dbserver", "pre-prod", "-d"};
         GetArgs getArgs;
         WebServer webServer;
         ApplicationProperties applicationProperties;
@@ -74,10 +78,12 @@ public class DoubleHttpsClientTest {
         StringBuffer command;
         int responseCode;
         String response;
-        int nbEvents;
-        int nbPages;
+        TicketEventResultView ticketEventResultView;
+        EventList events;
+        int i;
+        BackupAssigneeIdentified contactNotifiedOfSupport;
 
-        System.out.println("DoubleHttpsClientTest");
+        System.out.println("BackupAssigneeIdentifiedTest");
 
         try {
             System.out.println("Analyse des arguments de la ligne de commande ...");
@@ -117,72 +123,47 @@ public class DoubleHttpsClientTest {
 
             System.out.println("Authentification en cours ...");
             httpsClient.sendPost(HttpsClient.REST_API_PATH + HttpsClient.LOGIN_CMDE);
-            System.out.println("coucou");
 
-            from = "2024-01-16T08:00:00Z";
-            to = "2024-01-16T09:00:00Z";
+            // from=2024-01-19T15:42:47Z&to=2024-01-19T15:43:56Z
+            from = "2024-01-19T15:42:47Z";
+            to = "2024-01-19T15:43:56Z";
             baseCommand = HttpsClient.EVENT_API_PATH + HttpsClient.TICKETS_CMDE;
             if (debugMode) {
                 System.out.println("  Commande pour récupérer les événements : " + baseCommand);
             }
-
-            nbEvents = 0;
-            nbPages = 0;
             range = new Range();
-            do {
-                command = new StringBuffer(baseCommand);
-                if (nbPages > 0) {
-                    command.append("?range=").append(range.getRange()).append("&");
-                } else {
-                    command.append("?");
-                }
-                command.append("from=").append(from);
-                command.append("&to=").append(to);
-                if (debugMode) {
-                    System.out.println("  Commande et arguments pour récupérer les événements : " + command);
-                }
-
-                httpsClient.sendGet(command.toString());
-                responseCode = httpsClient.getResponseCode();
-                System.out.println("  responseCode:" + responseCode);
-                response = httpsClient.getResponse();
-                System.out.println("  response:" + response);
-
-                if (responseCode == 200 || responseCode == 206) {
-                    range.contentRange(httpsClient.getContentRange());
-                    range.setPage(httpsClient.getAcceptRange());
-                    System.out.println(range);
-
-                    nbEvents += processEvents(nbEvents, response);
-                    nbPages++;
-                }
-            } while (range.hasNext());
-
-        } catch (Exception ex) {
-            Logger.getLogger(DoubleHttpsClientTest.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    private int processEvents(int offset, String response) {
-
-        TicketEventResultView ticketEventResultView;
-        EventList events;
-        int nbEvents;
-
-        nbEvents = 0;
-        try {
-            
+//            range.setOffset(0);
+            range.setLimit(17);
+            range.setCount(18);
+            command = new StringBuffer(baseCommand);
+            command.append("?range=").append(range.getRange()).append("&");
+            command.append("from=").append(from);
+            command.append("&to=").append(to);
+            if (debugMode) {
+                System.out.println("  Commande et arguments pour récupérer les événements : " + command);
+            }
+            httpsClient.sendGet(command.toString());
+            responseCode = httpsClient.getResponseCode();
+            System.out.println("  responseCode:" + responseCode);
+            response = httpsClient.getResponse();
+            System.out.println("  response:" + response);
             ticketEventResultView = objectMapper.readValue(response, TicketEventResultView.class);
             events = ticketEventResultView.getEvents();
             System.out.println("  nb event(s):" + events.size());
+            i = 0;
             for (Event event : events) {
-                nbEvents++;
-                System.out.println("  event(" + (offset + nbEvents) + "), processUid:" + event.getProcessUid() + ", aggregateuuid:" + event.getAggregateUid() + ", date:" + event.getDate() + ", sentDate:" + event.getSentDate() + ", eventType:" + event.getEventType());
+                i++;
+                System.out.println("  event(" + i + "), processUid:" + event.getProcessUid() + ", date:" + event.getDate() + ", eventType:" + event.getEventType());
+                if (event instanceof BackupAssigneeIdentified) {
+                    contactNotifiedOfSupport = (BackupAssigneeIdentified) event;
+                    System.out.println("    " + contactNotifiedOfSupport);
+                }
             }
-        } catch (IOException ex) {
-            Logger.getLogger(DoubleHttpsClientTest.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (utils.GetArgsException | IOException | WebServerException ex) {
+            Logger.getLogger(BackupAssigneeIdentifiedTest.class.getName()).log(Level.SEVERE, null, ex);
+            fail(ex.getMessage());
+        } catch (Exception ex) {
+            Logger.getLogger(BackupAssigneeIdentifiedTest.class.getName()).log(Level.SEVERE, null, ex);
         }
-
-        return nbEvents;
     }
 }
